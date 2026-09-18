@@ -1,0 +1,17 @@
+# Template: copy to .github/workflows/offline-checks.yml to enable GitHub Actions.
+name: Offline checks (no robot)
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pytest numpy pyyaml
+      - run: python scripts/check_repo.py
+      - run: python scripts/source_manifest.py --check
+      - run: python -m pytest -q tests
+      - run: PYTHONPATH=training/scripts python -m pytest -q training/tests
+      - run: python -m pytest -q src/zeno-wholebody-intervation/zeno-wholebody-robot/common/piper_ctrl/tests

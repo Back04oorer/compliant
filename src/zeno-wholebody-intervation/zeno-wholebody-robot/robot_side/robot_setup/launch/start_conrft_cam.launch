@@ -1,0 +1,69 @@
+<launch>
+    <arg name="enable_cameras" default="true" />
+    <arg name="camera_top_usb_port" default="1-2.1" />
+
+    <arg name="enable_fisheye" default="true" />
+    <arg name="fisheye_ns" default="fisheye" />
+    <arg name="fisheye_left_dev"  default="/dev/fisheye_left" />
+    <arg name="fisheye_right_dev" default="/dev/fisheye_right" />
+    <arg name="fisheye_top_dev"   default="/dev/wide_top" />
+
+<include file="$(find realsense2_camera)/launch/rs_camera.launch">
+    <arg name="camera" value="realsense_top" />
+    <arg name="usb_port_id" value="$(arg camera_top_usb_port)" />
+
+            <!-- 开启深度，使用 D435 推荐深度分辨率 848x480@30 -->
+    <arg name="enable_depth" default="true" />
+    <arg name="depth_width" default="848" />
+    <arg name="depth_height" default="480" />
+    <arg name="depth_fps" default="30" />
+
+            <!-- 红外左右图，用来保证深度正常，也方便后面做标定/调试 -->
+            <arg name="enable_infra1" default="true" />
+            <arg name="enable_infra2" default="true" />
+            <arg name="enable_infra" default="false" />
+            <!-- 有些版本用 infra1/2，不用总 infra -->
+            <arg name="infra_width" default="848" />
+            <arg name="infra_height" default="480" />
+            <arg name="infra_fps" default="30" />
+
+            <!-- 彩色图，用 848x480@30，带宽压力小一点，方便做视觉检测 -->
+            <arg name="enable_color" default="true" />
+            <arg name="color_width" default="848" />
+            <arg name="color_height" default="480" />
+            <arg name="color_fps" default="30" />
+
+            <!-- 深度对齐到彩色，如果后面是用 color 坐标下的 depth（比如点云/检测框投影），建议打开 -->
+            <arg name="align_depth" default="true" />
+
+            <!-- 点云 -->
+            <arg name="enable_pointcloud" default="true" />
+            <arg name="pointcloud_texture_stream" default="RS2_STREAM_COLOR" />
+            <arg name="pointcloud_texture_index" default="0" />
+            <arg name="allow_no_texture_points" default="false" />
+            <arg name="ordered_pc" default="false" />
+
+            <!-- 深度后处理滤波：孔洞填补、降噪等（按需可以慢慢加/减） -->
+            <!-- 可选组合：decimation,spatial,temporal,hole_filling -->
+            <arg name="filters" default="decimation,spatial,temporal,hole_filling" />
+
+            <!-- 有效距离上限（单位：米），-2 为关闭裁剪；如果只关心 3m 内，可以设成 3.0 -->
+            <arg name="clip_distance" default="3.0" />
+
+            <!-- 先暂时不要强制手动曝光，让相机自己自动调，方便排查问题 -->
+            <arg name="stereo_module/exposure/1" default="0" />
+            <arg name="stereo_module/gain/1" default="0" />
+            <arg name="stereo_module/exposure/2" default="0" />
+            <arg name="stereo_module/gain/2" default="0" />
+
+            <!-- 保持默认 -->
+            <arg name="enable_confidence" default="false" />
+            <arg name="confidence_width" default="-1" />
+            <arg name="confidence_height" default="-1" />
+            <arg name="confidence_fps" default="-1" />
+
+        </include>
+    <group if="$(arg enable_fisheye)">
+        <include file="$(find v4l2_cam_launch)/launch/fisheye_stereo.launch" />
+    </group>
+    </launch>

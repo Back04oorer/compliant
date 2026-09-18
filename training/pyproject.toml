@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stereo-patch"
+version = "0.2.0"
+description = "Stereo-Patch shared visual fusion with ACT, Diffusion Policy, and Flow Matching V2 action heads"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = {text = "Apache-2.0"}
+
+[tool.setuptools]
+packages = [
+  "stereo_patch",
+  "scripts",
+  "lerobot_policy_act_hf",
+  "lerobot_policy_stereo_act",
+  "lerobot_policy_stereo_shared",
+  "lerobot_policy_stereo_diffusion",
+  "lerobot_policy_stereo_flow",
+  "lerobot_policy_stereo_flow_v2",
+]
+
+[project.scripts]
+stereo-patch-train = "stereo_patch.cli:train_main"
+stereo-patch-infer = "stereo_patch.cli:infer_main"
+stereo-patch-download = "stereo_patch.cli:download_main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "scripts"]

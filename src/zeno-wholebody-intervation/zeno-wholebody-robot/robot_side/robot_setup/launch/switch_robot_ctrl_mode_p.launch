@@ -1,0 +1,29 @@
+<launch>
+    <arg name="enable_left" default="true" />
+    <arg name="enable_right" default="true" />
+    <arg name="enable_opp" default="false" />
+
+    <node
+        if="$(arg enable_left)"
+        pkg="rosservice"
+        type="rosservice"
+        name="set_ctrl_mode_left_p"
+        args="call --wait /robot/arm_left/set_ctrl_mode_srv false"
+        output="screen" />
+
+    <node
+        if="$(arg enable_right)"
+        pkg="rosservice"
+        type="rosservice"
+        name="set_ctrl_mode_right_p"
+        args="call --wait /robot/arm_right/set_ctrl_mode_srv false"
+        output="screen" />
+
+    <node
+        if="$(arg enable_opp)"
+        pkg="rosservice"
+        type="rosservice"
+        name="set_ctrl_mode_opp_p"
+        args="call --wait /robot/arm_opp/set_ctrl_mode_srv false"
+        output="screen" />
+</launch>

@@ -1,0 +1,48 @@
+profile_name: lfv_teleop_top_stereo_raw_only
+camera_transport: compressed
+
+# Formal LFV teleop collection profile.
+#
+# Records only:
+# - robot/teleop joint states
+# - robot-side joint_cmd_mux action labels
+# - left/right wrist fisheye compressed images
+# - top stereo side-by-side compressed raw image
+#
+# It intentionally does NOT record image_undistort, crop, table, preview, or
+# split top-stereo intermediate topics. Those are regenerated offline when
+# needed.
+
+required_topics:
+  - /robot/arm_left/joint_states_single
+  - /robot/arm_right/joint_states_single
+  - /teleop/arm_left/joint_states_single
+  - /teleop/arm_right/joint_states_single
+  - /robot/arm_left/joint_cmd_mux
+  - /robot/arm_right/joint_cmd_mux
+
+camera_streams:
+  - image_base: /fisheye_left/usb_cam_node/image_raw
+    camera_info: /fisheye_left/usb_cam_node/camera_info
+    camera_info_required: false
+  - image_base: /fisheye_right/usb_cam_node/image_raw
+    camera_info: /fisheye_right/usb_cam_node/camera_info
+    camera_info_required: false
+  - image_base: /top_stereo/color/image_raw
+    camera_info: /top_stereo/color/camera_info
+    camera_info_required: true
+
+optional_topics:
+  - /robot/arm_left/joint_cmd_mux/selected
+  - /robot/arm_right/joint_cmd_mux/selected
+
+hz_monitor_topics:
+  - /robot/arm_left/joint_states_single
+  - /robot/arm_right/joint_states_single
+  - /teleop/arm_left/joint_states_single
+  - /teleop/arm_right/joint_states_single
+  - /robot/arm_left/joint_cmd_mux
+  - /robot/arm_right/joint_cmd_mux
+  - /fisheye_left/usb_cam_node/image_raw
+  - /fisheye_right/usb_cam_node/image_raw
+  - /top_stereo/color/image_raw

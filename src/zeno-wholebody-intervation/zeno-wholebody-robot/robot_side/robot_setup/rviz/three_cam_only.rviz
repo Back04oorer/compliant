@@ -1,0 +1,95 @@
+Panels: []
+Preferences:
+  PromptSaveOnExit: true
+Toolbars:
+  toolButtonStyle: 2
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz/Image
+      Enabled: true
+      Image Topic: /fisheye_left/usb_cam_node/image_raw
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Fisheye_Left
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: raw
+      Unreliable: false
+      Value: true
+    - Class: rviz/Image
+      Enabled: true
+      Image Topic: /top_cam/color/image_raw
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Top_Cam
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: raw
+      Unreliable: false
+      Value: true
+    - Class: rviz/Image
+      Enabled: true
+      Image Topic: /fisheye_right/usb_cam_node/image_raw
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Fisheye_Right
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: raw
+      Unreliable: false
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Default Light: true
+    Fixed Frame: base_link
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+      Hide Inactive Objects: true
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 12
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Field of View: 0.7853981852531433
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: false
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.6853982210159302
+      Target Frame: <Fixed Frame>
+      Yaw: 0.6903982162475586
+    Saved: ~
+Window Geometry:
+  Fisheye_Left:
+    collapsed: false
+  Top_Cam:
+    collapsed: false
+  Fisheye_Right:
+    collapsed: false
+  Height: 1100
+  Hide Left Dock: true
+  Hide Right Dock: true
+  Width: 2200
+  X: 80
+  Y: 40

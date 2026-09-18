@@ -1,0 +1,6 @@
+Stereo-Patch includes modified integration code built against Hugging Face
+LeRobot's ACT, Diffusion Policy, and RTC implementations. LeRobot is Copyright
+2024 The Hugging Face team and is distributed under the Apache License 2.0.
+
+DINOv3, DeFM, and Fast-FoundationStereo are external dependencies and are not
+distributed by this repository.

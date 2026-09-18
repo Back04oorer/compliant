@@ -1,0 +1,14 @@
+/data/*
+!/data/.gitkeep
+
+/robot_side/piper_reachable_region/maps/*
+!/robot_side/piper_reachable_region/maps/.gitkeep
+
+# ==============================
+# Python bytecode & cache
+# ==============================
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc

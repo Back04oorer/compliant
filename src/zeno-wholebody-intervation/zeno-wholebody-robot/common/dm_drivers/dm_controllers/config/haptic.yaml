@@ -1,0 +1,52 @@
+# ========================================
+# hand reactive force feedback --> weight_max = 30.0
+# ========================================
+
+# x:
+#   motor_name: "joint2_motor"
+#   kp_default: 10
+#   kd_default: 1
+#   repulsive_force_threshold: 0.1
+#   pos_haptic_positive: 0.1
+#   pos_haptic_negative: -0.1
+#   kd_haptic: 2
+
+# y:
+#   motor_name: "joint1_motor"
+#   kp_default: 10
+#   kd_default: 1
+#   repulsive_force_threshold: 0.1
+#   pos_haptic_positive: 0.1
+#   pos_haptic_negative: -0.1
+#   kd_haptic: 2
+
+# ========================================
+# hand resilience force feedback --> weight_max = 70.0
+# ========================================
+
+x:
+  motor_name: "joint2_motor"
+  kp_default: 3
+  kd_default: 1
+  repulsive_force_threshold: 100
+  pos_haptic_positive: 0
+  pos_haptic_negative: 0
+  kd_haptic: 2
+
+y:
+  motor_name: "joint1_motor"
+  kp_default: 3
+  kd_default: 1
+  repulsive_force_threshold: 100
+  pos_haptic_positive: 0
+  pos_haptic_negative: 0
+  kd_haptic: 2
+
+z:
+  motor_name: "joint0_motor"
+  kp_default: 10.0
+  kd_default: 1.5
+  # repulsive_force_threshold: 5.0
+  # pos_haptic_positive: 0.15
+  # pos_haptic_negative: -0.15
+  # kd_haptic: 2.0

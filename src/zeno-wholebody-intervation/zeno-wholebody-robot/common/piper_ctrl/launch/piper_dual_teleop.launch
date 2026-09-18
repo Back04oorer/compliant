@@ -1,0 +1,84 @@
+<launch>
+  <arg name="left_can_port" default="can_left" />
+  <arg name="right_can_port" default="can_right" />
+  <arg name="auto_enable" default="true" />
+  <arg name="gravity_mix_mode" default="additive" />
+  <arg name="master_slave_enable" default="false" />
+  <arg name="mit_joint_pos_cmd_topic_left" default="/teleop/arm_left/joint_states_single" />
+  <arg name="mit_joint_pos_cmd_topic_right" default="/teleop/arm_right/joint_states_single" />
+  <arg name="left_ctrl_node_type" default="piper_ctrl_node.py" />
+  <arg name="right_ctrl_node_type" default="piper_ctrl_node.py" />
+  <arg name="intervention_switch_enable_left" default="false" />
+  <arg name="intervention_switch_enable_right" default="false" />
+  <arg name="intervention_mode_topic" default="/intervention/mode" />
+  <arg name="intervention_policy_topic_left" default="/robot/arm_left/robot_cmd" />
+  <arg name="intervention_policy_topic_right" default="/robot/arm_right/robot_cmd" />
+  <arg name="intervention_policy_kp_left" default="[7.0, 7.0, 7.0, 7.0, 7.0, 7.0]" />
+  <arg name="intervention_policy_kp_right" default="[7.0, 7.0, 7.0, 7.0, 7.0, 7.0]" />
+  <arg name="intervention_policy_kd_left" default="[0.8, 0.8, 0.8, 0.8, 0.8, 0.8]" />
+  <arg name="intervention_policy_kd_right" default="[0.8, 0.8, 0.8, 0.8, 0.8, 0.8]" />
+  <arg name="intervention_policy_enable_gravity_left" default="false" />
+  <arg name="intervention_policy_enable_gravity_right" default="false" />
+  <arg name="intervention_policy_gain_ramp_sec" default="0.25" />
+  <arg name="mit_enable_tor" default="false" />
+  <arg name="mit_enable_pos" default="true" />
+  <arg name="mit_max_torque_abs" default="18.0" />
+  <arg name="launch_prefix" default="" />
+  <!-- 
+    Piper Dual Teleop Launch
+    
+    Parameter loading order:
+    1. piper_ctrl_mit_gravity.yaml - Control parameters with gravity compensation
+    2. piper_dual.yaml - Node-specific parameters (can_port, topics, gripper)
+    
+    piper_dual.yaml is loaded to root namespace where node name keys 
+    (e.g., piper_teleop_left_node) map to each node's private namespace.
+  -->
+
+  <!-- Load node-specific parameters once to avoid cross-node overwrite races -->
+  <rosparam file="$(find piper_ctrl)/config/piper_dual.yaml" command="load" ns="/"/>
+
+  <!-- Left arm node -->
+  <node name="piper_teleop_left_node" pkg="piper_ctrl" type="$(arg left_ctrl_node_type)" output="screen" launch-prefix="$(arg launch_prefix)">
+    <!-- Load control parameters (with gravity compensation) to node's private namespace -->
+    <rosparam file="$(find piper_ctrl)/config/piper_ctrl_mit_gravity.yaml" command="load"/>
+    <param name="can_port" value="$(arg left_can_port)" />
+    <param name="auto_enable" value="$(arg auto_enable)" />
+    <!-- Runtime safety overrides -->
+    <param name="mit/gravity_mix_mode" value="$(arg gravity_mix_mode)" />
+    <param name="master_slave/enable" value="$(arg master_slave_enable)" />
+    <param name="remap/joint_pos_cmd_to" value="$(arg mit_joint_pos_cmd_topic_left)" />
+    <param name="intervention_switch/enable" value="$(arg intervention_switch_enable_left)" />
+    <param name="intervention_switch/mode_topic" value="$(arg intervention_mode_topic)" />
+    <param name="intervention_switch/policy_topic" value="$(arg intervention_policy_topic_left)" />
+    <rosparam subst_value="true" param="intervention_switch/policy_kp">$(arg intervention_policy_kp_left)</rosparam>
+    <rosparam subst_value="true" param="intervention_switch/policy_kd">$(arg intervention_policy_kd_left)</rosparam>
+    <param name="intervention_switch/policy_enable_gravity" value="$(arg intervention_policy_enable_gravity_left)" />
+    <param name="intervention_switch/policy_gain_ramp_sec" value="$(arg intervention_policy_gain_ramp_sec)" />
+    <param name="mit/enable_tor" value="$(arg mit_enable_tor)" />
+    <param name="mit/enable_pos" value="$(arg mit_enable_pos)" />
+    <param name="mit/max_torque_abs" value="$(arg mit_max_torque_abs)" />
+  </node>
+  
+  <!-- Right arm node -->
+  <node name="piper_teleop_right_node" pkg="piper_ctrl" type="$(arg right_ctrl_node_type)" output="screen" launch-prefix="$(arg launch_prefix)">
+    <!-- Load control parameters (with gravity compensation) to node's private namespace -->
+    <rosparam file="$(find piper_ctrl)/config/piper_ctrl_mit_gravity.yaml" command="load"/>
+    <param name="can_port" value="$(arg right_can_port)" />
+    <param name="auto_enable" value="$(arg auto_enable)" />
+    <!-- Runtime safety overrides -->
+    <param name="mit/gravity_mix_mode" value="$(arg gravity_mix_mode)" />
+    <param name="master_slave/enable" value="$(arg master_slave_enable)" />
+    <param name="remap/joint_pos_cmd_to" value="$(arg mit_joint_pos_cmd_topic_right)" />
+    <param name="intervention_switch/enable" value="$(arg intervention_switch_enable_right)" />
+    <param name="intervention_switch/mode_topic" value="$(arg intervention_mode_topic)" />
+    <param name="intervention_switch/policy_topic" value="$(arg intervention_policy_topic_right)" />
+    <rosparam subst_value="true" param="intervention_switch/policy_kp">$(arg intervention_policy_kp_right)</rosparam>
+    <rosparam subst_value="true" param="intervention_switch/policy_kd">$(arg intervention_policy_kd_right)</rosparam>
+    <param name="intervention_switch/policy_enable_gravity" value="$(arg intervention_policy_enable_gravity_right)" />
+    <param name="intervention_switch/policy_gain_ramp_sec" value="$(arg intervention_policy_gain_ramp_sec)" />
+    <param name="mit/enable_tor" value="$(arg mit_enable_tor)" />
+    <param name="mit/enable_pos" value="$(arg mit_enable_pos)" />
+    <param name="mit/max_torque_abs" value="$(arg mit_max_torque_abs)" />
+  </node>
+</launch>

@@ -1,0 +1,11 @@
+<launch>
+    <!--
+      Teleop robot profile:
+      - no arbiter
+      - robot mux defaults to /teleop/arm_*/joint_states_single
+      - /robot/arm_*/vla_joint_cmd remains available for manual switch
+    -->
+    <include file="$(find robot_setup)/launch/start_robot_all.launch" pass_all_args="true">
+        <arg name="robot_control_mode" value="teleop" />
+    </include>
+</launch>

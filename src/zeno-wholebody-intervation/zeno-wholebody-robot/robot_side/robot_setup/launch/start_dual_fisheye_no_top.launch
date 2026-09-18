@@ -1,0 +1,55 @@
+<launch>
+    <!--
+      Local dual-fisheye launcher for the current robot setup:
+      - left wrist fisheye only
+      - right wrist fisheye only
+      - no top / mid fisheye
+      - no dependency on external v4l2_cam_launch package
+    -->
+
+    <arg name="left_usb_port" default="1-3.3" />
+    <arg name="right_usb_port" default="1-3.4" />
+
+    <arg name="left_frame_id" default="fisheye_left_optical_frame" />
+    <arg name="right_frame_id" default="fisheye_right_optical_frame" />
+
+    <arg name="image_width" default="640" />
+    <arg name="image_height" default="480" />
+    <arg name="fps" default="30" />
+    <arg name="pixel_format" default="mjpeg" />
+    <arg name="jpeg_quality" default="85" />
+
+    <group ns="fisheye_left">
+        <node pkg="robot_setup" type="top_usb_camera_node.py" name="usb_cam_node" output="screen">
+            <param
+                name="video_device"
+                command="$(find robot_setup)/scripts/resolve_usb_video_device.py --usb-port $(arg left_usb_port)" />
+            <param name="image_width" value="$(arg image_width)" />
+            <param name="image_height" value="$(arg image_height)" />
+            <param name="framerate" value="$(arg fps)" />
+            <param name="pixel_format" value="$(arg pixel_format)" />
+            <param name="jpeg_quality" value="$(arg jpeg_quality)" />
+            <param name="camera_frame_id" value="$(arg left_frame_id)" />
+            <remap from="image_raw" to="image_raw" />
+            <remap from="image_raw/compressed" to="image_raw/compressed" />
+            <remap from="camera_info" to="camera_info" />
+        </node>
+    </group>
+
+    <group ns="fisheye_right">
+        <node pkg="robot_setup" type="top_usb_camera_node.py" name="usb_cam_node" output="screen">
+            <param
+                name="video_device"
+                command="$(find robot_setup)/scripts/resolve_usb_video_device.py --usb-port $(arg right_usb_port)" />
+            <param name="image_width" value="$(arg image_width)" />
+            <param name="image_height" value="$(arg image_height)" />
+            <param name="framerate" value="$(arg fps)" />
+            <param name="pixel_format" value="$(arg pixel_format)" />
+            <param name="jpeg_quality" value="$(arg jpeg_quality)" />
+            <param name="camera_frame_id" value="$(arg right_frame_id)" />
+            <remap from="image_raw" to="image_raw" />
+            <remap from="image_raw/compressed" to="image_raw/compressed" />
+            <remap from="camera_info" to="camera_info" />
+        </node>
+    </group>
+</launch>

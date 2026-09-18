@@ -1,0 +1,13 @@
+{
+  "hardware_reviewed": false,
+  "robot_left_can": "can_sl",
+  "robot_right_can": "can_sr",
+  "teleop_left_can": "can_left",
+  "teleop_right_can": "can_right",
+  "gravity_joint_scale": [0.28, 0.28, 0.28, 0.95, 0.95, 0.95],
+  "enable_cameras": false,
+  "enable_rviz": false,
+  "left_wrist_usb_port": "",
+  "right_wrist_usb_port": "",
+  "top_usb_port": ""
+}

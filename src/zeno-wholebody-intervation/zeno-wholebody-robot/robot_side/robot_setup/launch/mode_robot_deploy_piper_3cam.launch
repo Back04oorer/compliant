@@ -1,0 +1,48 @@
+<launch>
+    <!--
+      One-launch robot deployment mode for current Piper hardware:
+      - robot stack only
+      - 2 fisheye + 1 top usb camera
+      - RViz enabled
+      - auto_enable enabled by default
+    -->
+
+    <!-- CAN mapping (current confirmed hardware) -->
+    <arg name="robot_left_can" default="can_sl" />
+    <arg name="robot_right_can" default="can_sr" />
+
+    <!-- USB camera ports -->
+    <arg name="fisheye_left_usb_port" default="7-1" />
+    <arg name="fisheye_right_usb_port" default="7-2" />
+    <arg name="top_usb_port" default="1-2.1" />
+
+    <!-- Control defaults -->
+    <arg name="auto_enable" default="true" />
+    <arg name="enable_rviz" default="true" />
+
+    <include file="$(find robot_setup)/launch/start_robot_all.launch">
+        <arg name="left_can_port" value="$(arg robot_left_can)" />
+        <arg name="right_can_port" value="$(arg robot_right_can)" />
+        <arg name="auto_enable" value="$(arg auto_enable)" />
+
+        <arg name="enable_cameras" value="true" />
+        <arg name="camera_left_name" value="fisheye_left" />
+        <arg name="camera_left_backend" value="usb" />
+        <arg name="camera_left_usb_port" value="$(arg fisheye_left_usb_port)" />
+        <arg name="camera_left_frame_id" value="fisheye_left_optical_frame" />
+
+        <arg name="camera_right_name" value="fisheye_right" />
+        <arg name="camera_right_backend" value="usb" />
+        <arg name="camera_right_usb_port" value="$(arg fisheye_right_usb_port)" />
+        <arg name="camera_right_frame_id" value="fisheye_right_optical_frame" />
+
+        <arg name="camera_top_name" value="top_cam" />
+        <arg name="camera_top_backend" value="usb" />
+        <arg name="camera_top_usb_port" value="$(arg top_usb_port)" />
+        <arg name="top_usb_frame_id" value="top_cam_color_optical_frame" />
+
+        <arg name="enable_handeye_tf" value="false" />
+        <arg name="enable_rviz" value="$(arg enable_rviz)" />
+        <arg name="use_default_rviz" value="true" />
+    </include>
+</launch>

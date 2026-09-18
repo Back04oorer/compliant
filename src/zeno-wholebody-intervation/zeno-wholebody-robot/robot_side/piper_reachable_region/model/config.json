@@ -1,0 +1,47 @@
+{
+  "model_architecture": {
+    "input_dim": 3,
+    "hidden_dim": 128,
+    "num_layers": 5,
+    "output_manip": true
+  },
+  "normalization": {
+    "xyz_min": [
+      -0.625,
+      -0.625,
+      -0.2749999761581421
+    ],
+    "xyz_max": [
+      0.625,
+      0.625,
+      0.7749999761581421
+    ],
+    "manip_max": 0.34590810537338257,
+    "manip_min": 7.002028468150456e-08
+  },
+  "training": {
+    "epochs": 100,
+    "batch_size": 64,
+    "learning_rate": 0.001,
+    "lambda_reach": 1.0,
+    "lambda_manip": 0.1,
+    "negative_ratio": 1.0,
+    "validation_split": 0.1
+  },
+  "data_stats": {
+    "num_positive": 8214,
+    "num_negative": 2545,
+    "xyz_min": [
+      -0.625,
+      -0.625,
+      -0.2749999761581421
+    ],
+    "xyz_max": [
+      0.625,
+      0.625,
+      0.7749999761581421
+    ],
+    "manip_max": 0.34590810537338257,
+    "manip_min": 7.002028468150456e-08
+  }
+}

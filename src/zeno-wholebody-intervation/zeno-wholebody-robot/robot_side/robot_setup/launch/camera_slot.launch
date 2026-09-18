@@ -1,0 +1,128 @@
+<launch>
+    <arg name="enable" default="false" />
+    <arg name="camera_name" default="camera" />
+    <arg name="camera_backend" default="auto" />
+    <arg name="camera_usb_port" default="" />
+    <arg name="camera_serial_no" default="" />
+    <arg name="usb_port_markers" default="" />
+    <!-- Safety default: do NOT auto-switch to usb_cam unless explicitly enabled. -->
+    <arg name="allow_auto_usb_fallback" default="false" />
+    <arg name="camera_frame_id" default="$(eval arg('camera_name') + '_color_optical_frame')" />
+
+    <arg name="realsense_launch_prefix" default="" />
+    <arg name="realsense_initial_reset" default="false" />
+    <!-- LibRealSense log severity: NONE/FATAL/ERROR/WARN/INFO/DEBUG -->
+    <arg name="realsense_log_level" default="ERROR" />
+    <arg name="rs_enable_color" default="true" />
+    <arg name="rs_color_width" default="640" />
+    <arg name="rs_color_height" default="480" />
+    <arg name="rs_color_fps" default="30" />
+    <arg name="rs_enable_depth" default="false" />
+    <arg name="rs_enable_infra1" default="false" />
+    <arg name="rs_enable_infra2" default="false" />
+    <arg name="rs_enable_pointcloud" default="false" />
+    <arg name="rs_align_depth" default="false" />
+
+    <arg name="usb_video_device" default="/dev/video0" />
+    <arg name="usb_image_width" default="1280" />
+    <arg name="usb_image_height" default="720" />
+    <arg name="usb_fps" default="30" />
+    <arg name="usb_pixel_format" default="mjpeg" />
+    <arg name="usb_driver_impl" default="custom" />
+    <arg name="usb_color_format" default="yuv422p" />
+    <arg name="usb_io_method" default="mmap" />
+    <arg name="usb_jpeg_quality" default="85" />
+    <arg name="usb_preconfigure_v4l2" default="true" />
+    <arg name="usb_configure_capture_properties" default="true" />
+    <arg name="usb_startup_open_delay_sec" default="0.0" />
+    <arg name="usb_enforce_actual_resolution" default="false" />
+    <arg name="usb_enforce_actual_pixel_format" default="false" />
+    <arg name="usb_startup_verify_frame_count" default="0" />
+    <arg name="usb_startup_min_read_fps_ratio" default="0.0" />
+
+    <arg
+        name="use_usb_cam"
+        default="$(eval arg('camera_backend').strip().lower() == 'usb' or ((str(arg('allow_auto_usb_fallback')).strip().lower() in ['true', '1', 'yes', 'on']) and arg('camera_backend').strip().lower() == 'auto' and (not str(arg('camera_serial_no')).strip()) and arg('camera_usb_port') in [x.strip() for x in arg('usb_port_markers').split(',') if x.strip()]))" />
+
+    <group if="$(arg enable)">
+        <group unless="$(arg use_usb_cam)">
+            <group>
+                <env name="LRS_LOG_LEVEL" value="$(arg realsense_log_level)" />
+                <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+                    <arg name="camera" value="$(arg camera_name)" />
+                    <arg name="serial_no" value="$(arg camera_serial_no)" />
+                    <arg name="usb_port_id" value="$(eval '' if str(arg('camera_serial_no')).strip() else arg('camera_usb_port'))" />
+                    <arg name="launch_prefix" value="$(arg realsense_launch_prefix)" />
+                    <arg name="initial_reset" value="$(arg realsense_initial_reset)" />
+                    <arg name="enable_color" value="$(arg rs_enable_color)" />
+                    <arg name="color_width" value="$(arg rs_color_width)" />
+                    <arg name="color_height" value="$(arg rs_color_height)" />
+                    <arg name="color_fps" value="$(arg rs_color_fps)" />
+                    <arg name="enable_depth" value="$(arg rs_enable_depth)" />
+                    <arg name="enable_infra1" value="$(arg rs_enable_infra1)" />
+                    <arg name="enable_infra2" value="$(arg rs_enable_infra2)" />
+                    <arg name="enable_pointcloud" value="$(arg rs_enable_pointcloud)" />
+                    <arg name="align_depth" value="$(arg rs_align_depth)" />
+                </include>
+            </group>
+        </group>
+
+        <group if="$(eval arg('use_usb_cam') and arg('usb_driver_impl').strip().lower() == 'usb_cam')" ns="$(arg camera_name)">
+            <node pkg="usb_cam" type="usb_cam_node" name="usb_cam_node" output="screen">
+                <param
+                    name="video_device"
+                    command="$(find robot_setup)/scripts/resolve_usb_video_device.py --usb-port $(arg camera_usb_port)" />
+                <param name="image_width" value="$(arg usb_image_width)" />
+                <param name="image_height" value="$(arg usb_image_height)" />
+                <param name="framerate" value="$(arg usb_fps)" />
+                <param name="pixel_format" value="$(arg usb_pixel_format)" />
+                <param name="color_format" value="$(arg usb_color_format)" />
+                <param name="io_method" value="$(arg usb_io_method)" />
+                <param name="camera_frame_id" value="$(arg camera_frame_id)" />
+                <remap from="image_raw" to="color/image_raw" />
+                <remap from="camera_info" to="color/camera_info" />
+            </node>
+        </group>
+
+        <group if="$(eval arg('use_usb_cam') and arg('usb_driver_impl').strip().lower() == 'mjpg_direct')" ns="$(arg camera_name)">
+            <node pkg="robot_setup" type="top_mjpg_camera_node.py" name="usb_cam_node" output="screen">
+                <param
+                    name="video_device"
+                    command="$(find robot_setup)/scripts/resolve_usb_video_device.py --usb-port $(arg camera_usb_port)" />
+                <param name="image_width" value="$(arg usb_image_width)" />
+                <param name="image_height" value="$(arg usb_image_height)" />
+                <param name="framerate" value="$(arg usb_fps)" />
+                <param name="camera_frame_id" value="$(arg camera_frame_id)" />
+                <param name="enforce_actual_resolution" value="$(arg usb_enforce_actual_resolution)" />
+                <param name="enforce_actual_pixel_format" value="$(arg usb_enforce_actual_pixel_format)" />
+                <remap from="image_raw/compressed" to="color/image_raw/compressed" />
+                <remap from="camera_info" to="color/camera_info" />
+            </node>
+        </group>
+
+        <group if="$(eval arg('use_usb_cam') and arg('usb_driver_impl').strip().lower() not in ['usb_cam', 'mjpg_direct'])" ns="$(arg camera_name)">
+            <node pkg="robot_setup" type="top_usb_camera_node.py" name="usb_cam_node" output="screen">
+                <param
+                    name="video_device"
+                    command="$(find robot_setup)/scripts/resolve_usb_video_device.py --usb-port $(arg camera_usb_port)" />
+                <param name="image_width" value="$(arg usb_image_width)" />
+                <param name="image_height" value="$(arg usb_image_height)" />
+                <param name="framerate" value="$(arg usb_fps)" />
+                <param name="pixel_format" value="$(arg usb_pixel_format)" />
+                <param name="io_method" value="$(arg usb_io_method)" />
+                <param name="jpeg_quality" value="$(arg usb_jpeg_quality)" />
+                <param name="preconfigure_v4l2" value="$(arg usb_preconfigure_v4l2)" />
+                <param name="configure_capture_properties" value="$(arg usb_configure_capture_properties)" />
+                <param name="startup_open_delay_sec" value="$(arg usb_startup_open_delay_sec)" />
+                <param name="enforce_actual_resolution" value="$(arg usb_enforce_actual_resolution)" />
+                <param name="enforce_actual_pixel_format" value="$(arg usb_enforce_actual_pixel_format)" />
+                <param name="startup_verify_frame_count" value="$(arg usb_startup_verify_frame_count)" />
+                <param name="startup_min_read_fps_ratio" value="$(arg usb_startup_min_read_fps_ratio)" />
+                <param name="camera_frame_id" value="$(arg camera_frame_id)" />
+                <remap from="image_raw" to="color/image_raw" />
+                <remap from="image_raw/compressed" to="color/image_raw/compressed" />
+                <remap from="camera_info" to="color/camera_info" />
+            </node>
+        </group>
+    </group>
+</launch>

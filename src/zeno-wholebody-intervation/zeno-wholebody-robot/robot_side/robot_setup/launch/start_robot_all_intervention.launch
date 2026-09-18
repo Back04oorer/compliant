@@ -1,0 +1,14 @@
+<launch>
+    <!--
+      Intervention robot profile:
+      - arbiter enabled
+      - controlled arm mux defaults to robot_cmd; the other arm stays teleop
+      - mode switch uses /intervention/mode_cmd
+    -->
+    <arg name="robot_control_mode" default="intervention" />
+    <arg name="enable_arbiter_keyboard" default="false" />
+    <arg name="action_arbiter_controlled_arm" default="left" />
+    <arg name="action_arbiter_initial_mode" default="HUMAN" />
+
+    <include file="$(find robot_setup)/launch/start_robot_all.launch" pass_all_args="true" />
+</launch>

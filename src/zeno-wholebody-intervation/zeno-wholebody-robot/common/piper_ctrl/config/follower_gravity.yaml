@@ -1,0 +1,21 @@
+# Initial values reused from the working teleop gravity calculator.
+# These are NOT a calibrated follower torque conversion; validate per joint.
+# Loaded by both the calculator and each follower adapter. The adapter uses
+# state_timeout_sec/ramp_sec/max_abs_t_ref/max_t_ref_rate independently, so a
+# missing calculator cannot latch its last effort forever. Baseline Kp/Kd are
+# still loaded from piper_ctrl_mit.yaml; this file does not change them.
+# Disable at Robot launch with enable_follower_gravity:=false for an A/B test.
+joint_scale_left: [0.28, 0.28, 0.28, 0.95, 0.95, 0.95]
+joint_scale_right: [0.28, 0.28, 0.28, 0.95, 0.95, 0.95]
+# Gravity expressed in each arm's base frame; assumes upright mounting.
+gravity_vector_left: [0.0, 0.0, -9.81]
+gravity_vector_right: [0.0, 0.0, -9.81]
+urdf_package: piper_description
+urdf_relpath: urdf/piper_description.urdf
+rate_hz: 100.0
+state_timeout_sec: 0.10
+ramp_sec: 0.5
+# Calculator and consumer both ramp; effective settling can exceed 0.5 s.
+# Limits are SDK t_ref units; rate is t_ref units per second.
+max_abs_t_ref: [3.0, 3.0, 3.0, 2.0, 2.0, 2.0]
+max_t_ref_rate: [4.0, 4.0, 4.0, 4.0, 4.0, 4.0]

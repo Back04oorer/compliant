@@ -1,0 +1,6 @@
+# Mesh assets retain upstream bytes; do not render megabytes of geometry in diffs.
+*.STL binary
+*.stl binary
+*.dae -diff
+*.png binary
+*.jpg binary

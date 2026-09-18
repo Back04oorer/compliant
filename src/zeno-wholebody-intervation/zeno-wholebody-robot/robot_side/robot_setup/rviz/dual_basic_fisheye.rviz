@@ -1,0 +1,150 @@
+Panels:
+  - Class: rviz/Displays
+    Help Height: 0
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Fisheye_left1
+        - /Fisheye_right1
+        - /Top_cam1
+      Splitter Ratio: 0.5
+    Tree Height: 140
+  - Class: rviz/Selection
+    Name: Selection
+  - Class: rviz/Tool Properties
+    Expanded: ~
+    Name: Tool Properties
+    Splitter Ratio: 0.5
+  - Class: rviz/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+    Splitter Ratio: 0.5
+  - Class: rviz/Time
+    Name: Time
+    SyncMode: 0
+    SyncSource: Fisheye_left
+Preferences:
+  PromptSaveOnExit: true
+Toolbars:
+  toolButtonStyle: 2
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 160; 160; 160
+      Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 10
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Class: rviz/Image
+      Enabled: true
+      Image Topic: /fisheye_left/usb_cam_node/image_raw
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Fisheye_left
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: raw
+      Unreliable: false
+      Value: true
+    - Class: rviz/Image
+      Enabled: true
+      Image Topic: /fisheye_right/usb_cam_node/image_raw
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Fisheye_right
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: raw
+      Unreliable: false
+      Value: true
+    - Class: rviz/Image
+      Enabled: true
+      Image Topic: /top_cam/color/image_raw
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Top_cam
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: raw
+      Unreliable: false
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Default Light: true
+    Fixed Frame: base_link
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+      Hide Inactive Objects: true
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 14.848237991333008
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Field of View: 0.7853981852531433
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: false
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.6853982210159302
+      Target Frame: <Fixed Frame>
+      Yaw: 0.6903982162475586
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Fisheye_left:
+    collapsed: false
+  Fisheye_right:
+    collapsed: false
+  Top_cam:
+    collapsed: false
+  Height: 1142
+  Hide Left Dock: false
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd0000000400000000000002de00000173fc0200000005fb000000120049006d006100670065005f0074006f007000000002ed000001a20000001600fffffffb0000001200440065007000740068005f0074006f007000000002ed000002f60000001600fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730200000594000003d6000004180000008afb0000000a0049006d00610067006500000002ed000002f60000001600fffffffb0000000a0049006d00610067006501000002e6000001730000001600ffffff00000001000002db00000173fc0200000002fb0000000a0056006900650077007301000002e6000000a4000000a400fffffffb000000100044006900730070006c0061007900730100000390000000c9000000c900ffffff000000020000074a000002a3fc0100000003fb000000180046006900730068006500790065005f006c00650066007401000000000000017e0000009f00fffffffc0000018400000418000003bc00fffffffa000000000200000002fb000000100057006900640065005f0074006f00700100000000ffffffff0000001600fffffffb0000000800540069006d0065010000003d000002710000003900fffffffb0000001a0046006900730068006500790065005f0072006900670068007401000005a2000001a8000000a800ffffff00000003000009b800000267fc0100000001fb0000001200530065006c0065006300740069006f006e0000000000000009b80000007400ffffff000001850000017300000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000300000000000002de00000173fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730200000594000003d6000004180000008afb0000000a0056006900650077007301000002e6000000a4000000a400fffffffb000000100044006900730070006c0061007900730100000390000000c9000000c900ffffff000000020000074a000002a3fc0100000002fb000000180046006900730068006500790065005f006c00650066007401000000000000017e0000009f00fffffffb0000001a0046006900730068006500790065005f007200690067006800740100000184000001a8000000a800ffffff00000003000009b800000267fc0100000001fb0000001200530065006c0065006300740069006f006e0000000000000009b80000007400ffffff000001850000017300000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Selection:
+    collapsed: false
+  Time:
+    collapsed: false
+  Tool Properties:
+    collapsed: false
+  Views:
+    collapsed: false
+  Width: 1866
+  X: 347
+  Y: 316

@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 目标板位姿检测节点 (camera→target) -->
+
+    <arg name="node_prefix" default="left"/>
+
+    <!-- 相机话题配置 -->
+    <arg name="image_topic" default="/realsense_left/color/image_raw" />
+    <arg name="camera_info_topic" default="/realsense_left/color/camera_info" />
+    <arg name="target_pose_topic" default="/handeye/target_pose" />
+
+    <!-- ArUco 字典类型 -->
+    <!-- 可选: DICT_4X4_50, DICT_4X4_100, DICT_5X5_50, DICT_5X5_100, DICT_5X5_250, DICT_6X6_250, etc. -->
+    <arg name="aruco_dict" default="DICT_5X5_250" />
+
+    <!-- ArUco marker 检测参数 -->
+    <arg name="markers_x" default="3" />
+    <arg name="markers_y" default="4" />
+    <arg name="marker_size" default="0.0564" />  <!-- marker 边长 (米) -->
+    <arg name="marker_separation" default="0.0057" />  <!-- marker 间距 (米) -->
+
+    <!-- 可视化 -->
+    <arg name="show_visualization" default="true" />
+
+    <node name="$(arg node_prefix)_detect_target_node" pkg="cam_calibration" type="detect_target.py" output="screen">
+        <param name="image_topic" value="$(arg image_topic)" />
+        <param name="camera_info_topic" value="$(arg camera_info_topic)" />
+        <param name="target_pose_topic" value="$(arg target_pose_topic)" />
+        <param name="aruco_dict" value="$(arg aruco_dict)" />
+        <param name="markers_x" value="$(arg markers_x)" />
+        <param name="markers_y" value="$(arg markers_y)" />
+        <param name="marker_size" value="$(arg marker_size)" />
+        <param name="marker_separation" value="$(arg marker_separation)" />
+        <param name="show_visualization" value="$(arg show_visualization)" />
+    </node>
+</launch>

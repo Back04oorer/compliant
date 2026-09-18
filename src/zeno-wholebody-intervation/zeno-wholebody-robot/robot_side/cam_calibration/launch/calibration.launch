@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 标定-->
+    <arg name="markers_x" default="3" />
+    <arg name="markers_y" default="4" />
+    <arg name="marker_size" default="0.0564" />
+    <arg name="marker_separation" default="0.0057" />
+
+    <!-- <include file="$(find piper_ctrl)/launch/piper_dual_robot_rviz.launch">
+        <arg name="enable_default_tf" value="false" />
+    </include> -->
+
+    <!-- 目标板位姿检测-->
+    <include file="$(find cam_calibration)/launch/detect_target.launch">
+        <arg name="node_prefix" default="left" />
+        <arg name="image_topic" default="/realsense_left/color/image_raw" />
+        <arg name="camera_info_topic" default="/realsense_left/color/camera_info" />
+        <arg name="target_pose_topic" default="/handeye/left_cam_from_target" />
+        <arg name="aruco_dict" default="DICT_5X5_250" />
+        <arg name="markers_x" value="$(arg markers_x)" />
+        <arg name="markers_y" value="$(arg markers_y)" />
+        <arg name="marker_size" value="$(arg marker_size)" />
+        <arg name="marker_separation" value="$(arg marker_separation)" />
+        <arg name="show_visualization" default="true" />
+    </include>
+
+    <include file="$(find cam_calibration)/launch/detect_target.launch">
+        <arg name="node_prefix" default="right" />
+        <arg name="image_topic" default="/realsense_right/color/image_raw" />
+        <arg name="camera_info_topic" default="/realsense_right/color/camera_info" />
+        <arg name="target_pose_topic" default="/handeye/right_cam_from_target" />
+        <arg name="aruco_dict" default="DICT_5X5_250" />
+        <arg name="markers_x" value="$(arg markers_x)" />
+        <arg name="markers_y" value="$(arg markers_y)" />
+        <arg name="marker_size" value="$(arg marker_size)" />
+        <arg name="marker_separation" value="$(arg marker_separation)" />
+        <arg name="show_visualization" default="true" />
+    </include>
+
+    <include file="$(find cam_calibration)/launch/detect_target.launch">
+        <arg name="node_prefix" default="top" />
+        <arg name="image_topic" default="/realsense_top/color/image_raw" />
+        <arg name="camera_info_topic" default="/realsense_top/color/camera_info" />
+        <arg name="target_pose_topic" default="/handeye/top_cam_from_target" />
+        <arg name="aruco_dict" default="DICT_5X5_250" />
+        <arg name="markers_x" value="$(arg markers_x)" />
+        <arg name="markers_y" value="$(arg markers_y)" />
+        <arg name="marker_size" value="$(arg marker_size)" />
+        <arg name="marker_separation" value="$(arg marker_separation)" />
+        <arg name="show_visualization" default="true" />
+    </include>
+
+    <node name="calibration_left" pkg="cam_calibration" type="calibration.py" output="screen">
+        <param name="joint_state_topic" value="/robot/arm_left/joint_states_single" />
+        <param name="end_pose_topic" value="/robot/arm_left/end_pose" />
+        <param name="target_pose_topic" value="/handeye/left_cam_from_target" />
+        <!-- <param name="top_target_pose_topic" value="/handeye/top_cam_from_target" /> -->
+        <param name="joint_cmd_topic" value="/robot/arm_left/joint_pos_cmd" />
+        <param name="min_samples" value="5" />
+        <param name="settle_time" value="30.0" />
+        <param name="interpolation_steps" value="50" />
+        <param name="interpolation_duration" value="2.0" />
+        <param name="trajectory_file" value="" />
+        <param name="direction" value="left" />
+    </node>
+
+    <node name="calibration_right" pkg="cam_calibration" type="calibration.py" output="screen">
+        <param name="joint_state_topic" value="/robot/arm_right/joint_states_single" />
+        <param name="end_pose_topic" value="/robot/arm_right/end_pose" />
+        <param name="target_pose_topic" value="/handeye/right_cam_from_target" />
+        <!-- <param name="top_target_pose_topic" value="/handeye/top_cam_from_target" /> -->
+        <param name="joint_cmd_topic" value="/robot/arm_right/joint_pos_cmd" />
+        <param name="min_samples" value="5" />
+        <param name="settle_time" value="30.0" />
+        <param name="interpolation_steps" value="50" />
+        <param name="interpolation_duration" value="2.0" />
+        <param name="trajectory_file" value="" />
+        <param name="direction" value="right" />
+    </node>
+
+    <!-- 发布 handeye TF（gripper -> camera） -->
+    <!-- 可选：指定特定标定文件；若为空自动选择最新 handeye_data_*.json -->
+    <!-- <node pkg="cam_calibration" type="tf_publisher.py" name="handeye_tf_publisher" output="screen">
+        <param name="trajectory_file" value="" />
+        <param name="parent_frame" value="gripper_base" />
+        <param name="child_frame" value="realsense_left_color_optical_frame" />
+        <param name="publish_rate" value="100.0" />
+    </node> -->
+</launch>

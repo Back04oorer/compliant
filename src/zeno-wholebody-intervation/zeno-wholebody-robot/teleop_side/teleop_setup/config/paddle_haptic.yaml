@@ -1,0 +1,81 @@
+# ========================================
+# Motor haptic parameters (from dm_controllers)
+# ========================================
+
+# Hand reactive force feedback --> weight_max = ???
+# x:
+#   motor_name: "joint2_motor"
+#   kp_default: 10
+#   kd_default: 1
+#   repulsive_force_threshold: 0.1
+#   pos_haptic_positive: 0.1
+#   pos_haptic_negative: -0.1
+#   kd_haptic: 2
+
+# y:
+#   motor_name: "joint1_motor"
+#   kp_default: 10
+#   kd_default: 1
+#   repulsive_force_threshold: 0.1
+#   pos_haptic_positive: 0.1
+#   pos_haptic_negative: -0.1
+#   kd_haptic: 2
+
+# z:
+#   motor_name: "joint0_motor"
+#   kp_default: 10.0
+#   kd_default: 1.5
+#   # repulsive_force_threshold: 5.0
+#   # pos_haptic_positive: 0.15
+#   # pos_haptic_negative: -0.15
+#   # kd_haptic: 2.0
+
+# Hand resilience force feedback --> weight_max = 70.0
+x:
+  motor_name: "joint2_motor"
+  kp_default: 3
+  kd_default: 1
+  repulsive_force_threshold: 0.01
+  pos_haptic_positive: 0
+  pos_haptic_negative: 0
+  kd_haptic: 2
+
+y:
+  motor_name: "joint1_motor"
+  kp_default: 3
+  kd_default: 1
+  repulsive_force_threshold: 0.01
+  pos_haptic_positive: 0
+  pos_haptic_negative: 0
+  kd_haptic: 2
+
+z:
+  motor_name: "joint0_motor"
+  kp_default: 10.0
+  kd_default: 1.5
+  # repulsive_force_threshold: 5.0
+  # pos_haptic_positive: 0.15
+  # pos_haptic_negative: -0.15
+  # kd_haptic: 2.0
+
+# ========================================
+# Paddle haptic client parameters (lidar-based)
+# ========================================
+
+# Topic configurations
+scan_topic: "/scan"
+repulsive_force_vector_topic: "/repulsive_force_vector"
+repulsive_force_marker_topic: "/repulsive_force_marker"
+weighted_pointcloud_topic: "/weighted_pointcloud"
+range_circles_topic: "/range_circles"
+frame_marker_topic: "/laser_frame_marker"
+
+# Force field parameters
+r_min: 0.35          # Minimum distance threshold (m)
+r_far: 0.75          # Far distance threshold (m)
+weight_max: 70.0    # Maximum weight for force calculation
+delta: 0.01         # Smoothstep transition range (m)
+
+# Filter parameters
+filter_alpha: 0.3   # Low-pass filter alpha (0-1, smaller = more smoothing)
+

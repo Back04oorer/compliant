@@ -1,0 +1,205 @@
+<launch>
+	<!--
+	╔══════════════════════════════════════════════════════════════════╗
+	║        【初学者速读】start_teleop_all.launch 是什么？            ║
+	╚══════════════════════════════════════════════════════════════════╝
+
+	这是遥操作端（人手持示教臂一侧）的"总开关"启动文件。
+	与 start_robot_all.launch（机器人执行端）相对应，
+	两者通过网络/ROS话题互通，共同构成"主从遥操作"系统。
+
+	┌─────────────────── 系统角色对比 ──────────────────────────────┐
+	│  teleop端（本文件）      robot端（start_robot_all.launch）    │
+	│  人手持示教臂操作  ───►  机器人跟随执行                       │
+	│  采集人手的关节角度      接收并复现关节角度                    │
+	└────────────────────────────────────────────────────────────────┘
+
+	┌─────────────────── 启动了哪些东西？───────────────────────────┐
+	│                                                                │
+	│  1. 拨片/阻尼控制器（damiao，可选，默认开启）                  │
+	│     enable_paddle=true → 启动达妙电机驱动 (load_dm_hw.launch) │
+	│     enable_paddle_haptic=true → 同时启动力反馈（触觉）功能    │
+	│     力反馈 = 机器人端受力后，示教臂也会产生阻力，让操作者     │
+	│              "感觉到"机器人在夹什么东西                        │
+	│                                                                │
+	│  2. 双臂遥操作节点（piper_dual_teleop.launch，默认开启）       │
+	│     读取示教臂的关节角度 → 发布到 ROS 话题                    │
+	│     机器人端订阅这些话题并跟随运动                             │
+	│     master_slave_enable=false → 主从模式默认关闭               │
+	│     mit_enable_pos=true → 用位置模式控制（而非力矩模式）       │
+	│                                                                │
+	│  3. 重力补偿节点（piper_gravity_compensation_node，默认开启）  │
+	│     示教臂悬空时，自身重量会让关节下垂 → 操作者手很累         │
+	│     重力补偿 = 计算每个关节需要多少力矩抵抗重力，主动施加     │
+	│     让示教臂"感觉很轻"，操作者只需克服惯性即可               │
+	│     URDF = 机器人三维模型文件，节点用它计算各关节受力         │
+	└────────────────────────────────────────────────────────────────┘
+
+	┌─────────────────── 重力补偿参数速查 ──────────────────────────┐
+	│  gravity_joint_scale   各关节补偿力矩的缩放系数（调大=补偿更强）│
+	│  gravity_joint_sign    各关节力矩方向符号（+1/-1，装反时翻转） │
+	│  gravity_joint_offset  各关节固定偏置力矩（抵消安装误差）      │
+	│  gravity_mix_mode      additive = 在原始力矩上叠加补偿量       │
+	│  max_joint_step        单步最大补偿幅度（0=不限制）            │
+	│  max_torque_delta_warn 补偿力矩突变超过此值时打印警告          │
+	└────────────────────────────────────────────────────────────────┘
+
+	┌─────────────────── 启动顺序示意 ──────────────────────────────┐
+	│  roslaunch teleop_setup start_teleop_all.launch                │
+	│      │                                                         │
+	│      ├─► [立刻] 达妙电机驱动（示教臂 CAN 通信）               │
+	│      ├─► [立刻] 力反馈客户端（paddle_haptic_client）           │
+	│      ├─► [立刻] 双臂遥操作节点（读关节角度，发话题）           │
+	│      └─► [立刻] 重力补偿节点（让示教臂"变轻"）                 │
+	└────────────────────────────────────────────────────────────────┘
+
+	常用启动覆盖示例：
+	  # 关闭力反馈（不需要触觉反馈时）
+	  roslaunch teleop_setup start_teleop_all.launch enable_paddle_haptic:=false
+
+	  # 关闭重力补偿（调试时想感受真实阻力）
+	  roslaunch teleop_setup start_teleop_all.launch enable_gravity_compensation:=false
+
+	  # 不启动拨片（只用双臂示教，无达妙电机）
+	  roslaunch teleop_setup start_teleop_all.launch enable_paddle:=false
+	-->
+
+	<!-- Arguments for CAN ports -->
+	<arg name="left_can_port" default="can_left" />
+	<arg name="right_can_port" default="can_right" />
+	<arg name="auto_enable" default="true" />
+	<arg name="teleop_node_launch_prefix" default="" />
+	<arg name="gravity_launch_prefix" default="" />
+
+	<!-- Arguments for paddle (damiao) -->
+	<arg name="enable_paddle" default="true" />
+	<arg name="enable_paddle_haptic" default="true" />
+
+	<!-- Arguments for dual-arm -->
+	<arg name="enable_dual_arm" default="true" />
+	<arg name="gripper_val_mutiple" default="2" />
+	<arg name="girpper_exist" default="true" />
+	<arg name="enable_gravity_compensation" default="false" />
+	<arg name="gravity_urdf_package" default="piper_description" />
+	<arg name="gravity_urdf_relpath" default="urdf/piper_description.urdf" />
+	<arg name="gravity_joint_scale" default="[1.0, 1.0, 1.0, 1.0, 1.0, 1.0]" />
+	<arg name="gravity_joint_scale_left" default="$(arg gravity_joint_scale)" />
+	<arg name="gravity_joint_scale_right" default="$(arg gravity_joint_scale)" />
+	<arg name="gravity_joint_sign" default="[1.0, 1.0, 1.0, 1.0, 1.0, 1.0]" />
+	<arg name="gravity_joint_sign_left" default="$(arg gravity_joint_sign)" />
+	<arg name="gravity_joint_sign_right" default="$(arg gravity_joint_sign)" />
+	<arg name="gravity_joint_position_scale" default="[1.0, 1.0, 1.0, 1.0, 1.0, 1.0]" />
+	<arg name="gravity_joint_position_scale_left" default="$(arg gravity_joint_position_scale)" />
+	<arg name="gravity_joint_position_scale_right" default="$(arg gravity_joint_position_scale)" />
+	<arg name="gravity_joint_offset" default="[0.0, 0.0, 0.0, 0.0, 0.0, 0.0]" />
+	<arg name="gravity_joint_offset_left" default="$(arg gravity_joint_offset)" />
+	<arg name="gravity_joint_offset_right" default="$(arg gravity_joint_offset)" />
+	<arg name="gravity_clip_to_limits" default="true" />
+	<arg name="gravity_unwrap_joint_positions" default="true" />
+	<arg name="gravity_max_joint_step" default="0.0" />
+	<arg name="gravity_max_torque_delta_warn" default="4.0" />
+	<arg name="gravity_mix_mode" default="additive" />
+	<arg name="master_slave_enable" default="false" />
+	<arg name="mit_joint_pos_cmd_topic_left" default="/teleop/arm_left/joint_states_single" />
+	<arg name="mit_joint_pos_cmd_topic_right" default="/teleop/arm_right/joint_states_single" />
+	<arg name="left_ctrl_node_type" default="piper_ctrl_node.py" />
+	<arg name="right_ctrl_node_type" default="piper_ctrl_node.py" />
+	<arg name="intervention_switch_enable_left" default="false" />
+	<arg name="intervention_switch_enable_right" default="false" />
+	<arg name="intervention_mode_topic" default="/intervention/mode" />
+	<arg name="intervention_policy_topic_left" default="/robot/arm_left/robot_cmd" />
+	<arg name="intervention_policy_topic_right" default="/robot/arm_right/robot_cmd" />
+	<arg name="intervention_policy_kp_left" default="[7.0, 7.0, 7.0, 7.0, 7.0, 7.0]" />
+	<arg name="intervention_policy_kp_right" default="[7.0, 7.0, 7.0, 7.0, 7.0, 7.0]" />
+	<arg name="intervention_policy_kd_left" default="[0.8, 0.8, 0.8, 0.8, 0.8, 0.8]" />
+	<arg name="intervention_policy_kd_right" default="[0.8, 0.8, 0.8, 0.8, 0.8, 0.8]" />
+	<arg name="intervention_policy_enable_gravity_left" default="false" />
+	<arg name="intervention_policy_enable_gravity_right" default="false" />
+	<arg name="intervention_policy_gain_ramp_sec" default="0.25" />
+	<arg name="mit_enable_tor" default="false" />
+	<arg name="mit_enable_pos" default="true" />
+	<arg name="mit_max_torque_abs" default="18.0" />
+	<arg name="robot_description_file" default="$(find piper_description)/urdf/piper_description.urdf" />
+
+	<!-- Setup robot_description for joint_state_publisher_gui if needed -->
+	<param name="robot_description" textfile="$(arg robot_description_file)" />
+
+	<!-- Launch paddle (damiao) node -->
+	<group if="$(arg enable_paddle)">
+		<!-- Use external paddle_haptic.yaml when haptic is enabled -->
+		<include file="$(find dm_controllers)/launch/load_dm_hw.launch" if="$(arg enable_paddle_haptic)">
+			<arg name="haptic_config" value="$(find teleop_setup)/config/paddle_haptic.yaml" />
+		</include>
+		<!-- Use default haptic.yaml when haptic is disabled -->
+		<include file="$(find dm_controllers)/launch/load_dm_hw.launch" unless="$(arg enable_paddle_haptic)" />
+
+		<group if="$(arg enable_paddle_haptic)">
+			<node name="paddle_haptic_client" pkg="teleop_setup" type="paddle_haptic_client.py" output="screen">
+				<rosparam file="$(find teleop_setup)/config/paddle_haptic.yaml" command="load" />
+			</node>
+		</group>
+	</group>
+
+	<!-- Launch dual-arm teleop node -->
+	<group if="$(arg enable_dual_arm)">
+			<include file="$(find piper_ctrl)/launch/piper_dual_teleop.launch">
+				<arg name="left_can_port" value="$(arg left_can_port)" />
+				<arg name="right_can_port" value="$(arg right_can_port)" />
+				<arg name="auto_enable" value="$(arg auto_enable)" />
+				<arg name="launch_prefix" value="$(arg teleop_node_launch_prefix)" />
+				<arg name="gravity_mix_mode" value="$(arg gravity_mix_mode)" />
+				<arg name="master_slave_enable" value="$(arg master_slave_enable)" />
+				<arg name="mit_joint_pos_cmd_topic_left" value="$(arg mit_joint_pos_cmd_topic_left)" />
+				<arg name="mit_joint_pos_cmd_topic_right" value="$(arg mit_joint_pos_cmd_topic_right)" />
+				<arg name="left_ctrl_node_type" value="$(arg left_ctrl_node_type)" />
+				<arg name="right_ctrl_node_type" value="$(arg right_ctrl_node_type)" />
+				<arg name="intervention_switch_enable_left" value="$(arg intervention_switch_enable_left)" />
+				<arg name="intervention_switch_enable_right" value="$(arg intervention_switch_enable_right)" />
+				<arg name="intervention_mode_topic" value="$(arg intervention_mode_topic)" />
+				<arg name="intervention_policy_topic_left" value="$(arg intervention_policy_topic_left)" />
+				<arg name="intervention_policy_topic_right" value="$(arg intervention_policy_topic_right)" />
+				<arg name="intervention_policy_kp_left" value="$(arg intervention_policy_kp_left)" />
+				<arg name="intervention_policy_kp_right" value="$(arg intervention_policy_kp_right)" />
+				<arg name="intervention_policy_kd_left" value="$(arg intervention_policy_kd_left)" />
+				<arg name="intervention_policy_kd_right" value="$(arg intervention_policy_kd_right)" />
+				<arg name="intervention_policy_enable_gravity_left" value="$(arg intervention_policy_enable_gravity_left)" />
+				<arg name="intervention_policy_enable_gravity_right" value="$(arg intervention_policy_enable_gravity_right)" />
+				<arg name="intervention_policy_gain_ramp_sec" value="$(arg intervention_policy_gain_ramp_sec)" />
+				<arg name="mit_enable_tor" value="$(arg mit_enable_tor)" />
+				<arg name="mit_enable_pos" value="$(arg mit_enable_pos)" />
+				<arg name="mit_max_torque_abs" value="$(arg mit_max_torque_abs)" />
+				<!-- <arg name="left_can_port" value="$(arg left_can_port)" />
+			<arg name="right_can_port" value="$(arg right_can_port)" />
+			<arg name="robot_prefix_left" value="/robot/arm_left/" />
+			<arg name="robot_prefix_right" value="/robot/arm_right/" />
+			<arg name="teleop_prefix_left" value="/teleop/arm_left/" />
+			<arg name="teleop_prefix_right" value="/teleop/arm_right/" /> -->
+		</include>
+	</group>
+
+	<!-- Launch gravity compensation node -->
+	<group if="$(arg enable_gravity_compensation)">
+			<node name="piper_gravity_compensation_node" pkg="piper_ctrl" type="piper_gravity_compensation_node.py"
+				output="screen"
+				launch-prefix="$(arg gravity_launch_prefix)">
+				<param name="urdf_package" value="$(arg gravity_urdf_package)" />
+				<param name="urdf_relpath" value="$(arg gravity_urdf_relpath)" />
+				<rosparam subst_value="true" param="gravity_joint_scale">$(arg gravity_joint_scale)</rosparam>
+				<rosparam subst_value="true" param="gravity_joint_scale_left">$(arg gravity_joint_scale_left)</rosparam>
+				<rosparam subst_value="true" param="gravity_joint_scale_right">$(arg gravity_joint_scale_right)</rosparam>
+					<rosparam subst_value="true" param="gravity_joint_sign">$(arg gravity_joint_sign)</rosparam>
+					<rosparam subst_value="true" param="gravity_joint_sign_left">$(arg gravity_joint_sign_left)</rosparam>
+					<rosparam subst_value="true" param="gravity_joint_sign_right">$(arg gravity_joint_sign_right)</rosparam>
+					<rosparam subst_value="true" param="gravity_joint_position_scale">$(arg gravity_joint_position_scale)</rosparam>
+					<rosparam subst_value="true" param="gravity_joint_position_scale_left">$(arg gravity_joint_position_scale_left)</rosparam>
+					<rosparam subst_value="true" param="gravity_joint_position_scale_right">$(arg gravity_joint_position_scale_right)</rosparam>
+					<rosparam subst_value="true" param="gravity_joint_offset">$(arg gravity_joint_offset)</rosparam>
+					<rosparam subst_value="true" param="gravity_joint_offset_left">$(arg gravity_joint_offset_left)</rosparam>
+					<rosparam subst_value="true" param="gravity_joint_offset_right">$(arg gravity_joint_offset_right)</rosparam>
+			<param name="clip_to_limits" value="$(arg gravity_clip_to_limits)" />
+			<param name="unwrap_joint_positions" value="$(arg gravity_unwrap_joint_positions)" />
+			<param name="max_joint_step" value="$(arg gravity_max_joint_step)" />
+			<param name="max_torque_delta_warn" value="$(arg gravity_max_torque_delta_warn)" />
+		</node>
+	</group>
+</launch>

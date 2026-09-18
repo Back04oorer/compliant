@@ -1,0 +1,12 @@
+# Copy this file to an untracked local manifest and replace the placeholders
+# with private Hugging Face model repositories. Never store access tokens here.
+models:
+  task_stereo_act:
+    repo_id: your-organization/task-stereo-act
+    revision: main
+  task_stereo_dp:
+    repo_id: your-organization/task-stereo-dp
+    revision: main
+  task_stereo_flow_v2:
+    repo_id: your-organization/task-stereo-flow-v2
+    revision: main

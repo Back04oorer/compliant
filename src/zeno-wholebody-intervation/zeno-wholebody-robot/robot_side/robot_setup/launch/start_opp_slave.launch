@@ -1,0 +1,43 @@
+<launch>
+    <arg name="opp_can_port" default="can_opp" />
+    <arg name="opp_topic_prefix" default="/robot/arm_opp/" />
+    <arg name="opp_teleop_topic" default="/teleop/arm_opp/joint_states_single" />
+    <arg name="opp_robot_cmd_topic" default="/robot/arm_opp/joint_cmd_mux" />
+    <arg name="opp_policy_topic" default="/robot/arm_opp/vla_joint_cmd" />
+    <arg name="auto_enable" default="true" />
+    <arg name="ctrl_mode" default="mit" />
+    <arg name="gripper_cmd_limit_enable" default="false" />
+    <arg name="gripper_cmd_deadband_raw" default="0" />
+
+    <node pkg="topic_tools" type="mux" name="mux_arm_opp_joint"
+          args="$(arg opp_robot_cmd_topic)
+                $(arg opp_policy_topic)
+                $(arg opp_teleop_topic)"
+          output="screen">
+        <param name="~default" value="$(arg opp_teleop_topic)" />
+    </node>
+
+    <node name="piper_ctrl_opp_node" pkg="piper_ctrl" type="piper_ctrl_node.py" output="screen">
+        <rosparam file="$(find piper_ctrl)/config/piper_ctrl_mit.yaml" command="load" />
+        <param name="can_port" value="$(arg opp_can_port)" />
+        <param name="topic_prefix" value="$(arg opp_topic_prefix)" />
+        <param name="auto_enable" value="$(arg auto_enable)" />
+        <param name="ctrl_mode" value="$(arg ctrl_mode)" />
+
+        <param name="gripper_exist" value="true" />
+        <param name="enable_gripper" value="true" />
+        <param name="enable_gripper_haptic" value="false" />
+        <param name="gripper_range" value="0.08" />
+        <param name="gripper_reverse" value="false" />
+        <param name="gripper_val_mutiple" value="1.0" />
+        <param name="gripper_cmd_limit_enable" value="$(arg gripper_cmd_limit_enable)" />
+        <param name="gripper_cmd_deadband_raw" value="$(arg gripper_cmd_deadband_raw)" />
+
+        <param name="remap/joint_pos_cmd_to" value="$(arg opp_robot_cmd_topic)" />
+        <param name="remap/gripper_pos_cmd_to" value="$(arg opp_robot_cmd_topic)" />
+    </node>
+
+    <node pkg="rosservice" type="rosservice" name="init_mux_opp"
+          args="call --wait /robot/arm_opp/joint_cmd_mux_select $(arg opp_teleop_topic)"
+          output="screen" />
+</launch>

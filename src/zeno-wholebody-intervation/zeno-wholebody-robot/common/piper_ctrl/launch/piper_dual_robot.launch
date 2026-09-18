@@ -1,0 +1,222 @@
+<launch>
+  <!--
+    Piper Dual Robot Launch
+
+    Control architecture:
+    - intervention (default):
+      dual_arm_action_arbiter runs continuously and downstream mux keeps /robot/arm_*/robot_cmd.
+    - teleop:
+      no arbiter, downstream mux switches directly between teleop and policy(VLA).
+  -->
+
+  <arg name="robot_control_mode" default="intervention" />
+  <arg name="left_can_port" default="can_sl" />
+  <arg name="right_can_port" default="can_sr" />
+  <arg name="auto_enable" default="true" />
+  <arg name="piper_ctrl_mode" default="mit" />
+  <!-- Persistent left-arm speed percentage; reused across agent tasks. -->
+  <arg name="left_speed_percent" default="25" />
+  <!-- Follower-only additive feedforward. false restores the original driver. -->
+  <arg name="enable_follower_gravity" default="true" />
+  <arg name="follower_gravity_config" default="$(find piper_ctrl)/config/follower_gravity.yaml" />
+  <arg name="use_follower_gravity" value="$(eval arg('enable_follower_gravity') and arg('piper_ctrl_mode') == 'mit')" />
+  <arg name="enable_action_arbiter" default="$(eval str(arg('robot_control_mode')).strip().lower() in ['intervention', 'arbiter'])" />
+  <arg name="enable_arbiter_keyboard" default="false" />
+  <arg name="action_arbiter_controlled_arm" default="both" />
+  <arg name="action_arbiter_left_mux_source" default="$(eval '/robot/arm_left/robot_cmd' if arg('action_arbiter_controlled_arm') in ['left', 'both'] else '/teleop/arm_left/joint_states_single')" />
+  <arg name="action_arbiter_right_mux_source" default="$(eval '/robot/arm_right/robot_cmd' if arg('action_arbiter_controlled_arm') in ['right', 'both'] else '/teleop/arm_right/joint_states_single')" />
+  <arg name="action_arbiter_initial_mode" default="POLICY" />
+  <arg name="action_arbiter_rate_hz" default="200.0" />
+  <arg name="action_arbiter_blend_sec" default="0.8" />
+  <arg name="action_arbiter_human_to_policy_blend_sec" default="$(arg action_arbiter_blend_sec)" />
+  <arg name="action_arbiter_sync_to_human_blend_sec" default="$(arg action_arbiter_blend_sec)" />
+  <arg name="action_arbiter_source_timeout_sec" default="0.30" />
+  <arg name="action_arbiter_allow_fallback" default="false" />
+  <arg name="action_arbiter_hold_last_on_timeout" default="true" />
+  <arg name="action_arbiter_publish_follow_flag" default="true" />
+  <arg name="action_arbiter_follow_flag_sync_value" default="true" />
+  <arg name="action_arbiter_prepare_human_joint_tol_rad" default="0.08" />
+  <arg name="action_arbiter_prepare_human_gripper_tol" default="0.008" />
+  <arg name="action_arbiter_prepare_human_ready_hold_sec" default="0.08" />
+  <arg name="action_arbiter_prepare_human_max_sec" default="0.60" />
+  <arg name="action_arbiter_prepare_human_hold_reference" default="true" />
+  <arg name="action_arbiter_prepare_human_reference_source" default="robot_state" />
+  <arg name="action_arbiter_left_robot_state_topic" default="/robot/arm_left/joint_states_single" />
+  <arg name="action_arbiter_right_robot_state_topic" default="/robot/arm_right/joint_states_single" />
+  <arg name="action_arbiter_prepare_policy_min_sec" default="0.05" />
+  <arg name="action_arbiter_prepare_policy_bias_tau_sec" default="0.25" />
+  <arg name="action_arbiter_prepare_policy_enter_tol_rad" default="0.012" />
+  <arg name="action_arbiter_prepare_policy_max_sec" default="0.80" />
+  <arg name="action_arbiter_prepare_policy_include_gripper_bias" default="false" />
+  <arg name="action_arbiter_prepare_policy_hold_gripper" default="true" />
+  <arg name="action_arbiter_prepare_policy_gripper_handover_sec" default="0.25" />
+  <arg name="action_arbiter_gripper_handover_sec" default="0.20" />
+  <!-- Gripper command shaping on robot side (can override piper_dual.yaml defaults). -->
+  <arg name="robot_gripper_open_scale" default="1.0" />
+  <arg name="left_gripper_val_mutiple" default="$(arg robot_gripper_open_scale)" />
+  <arg name="right_gripper_val_mutiple" default="$(arg robot_gripper_open_scale)" />
+  <arg name="gripper_cmd_limit_enable" default="true" />
+  <arg name="gripper_cmd_min_raw" default="0" />
+  <arg name="gripper_cmd_max_raw" default="80000" />
+  <arg name="gripper_cmd_deadband_raw" default="200" />
+
+  <!-- Load node-specific parameters once to avoid cross-node overwrite races. -->
+  <rosparam file="$(find piper_ctrl)/config/piper_dual.yaml" command="load" ns="/"/>
+
+  <!-- Left arm controller -->
+  <node name="piper_ctrl_left_node" pkg="piper_ctrl" type="$(eval 'piper_ctrl_follower_node.py' if arg('use_follower_gravity') else 'piper_ctrl_node.py')" output="screen">
+    <rosparam file="$(find piper_ctrl)/config/piper_ctrl_mit.yaml" command="load"/>
+    <param name="p/speed" value="$(arg left_speed_percent)" />
+    <param name="mit/speed" value="$(arg left_speed_percent)" />
+    <rosparam if="$(arg use_follower_gravity)" file="$(arg follower_gravity_config)" command="load" ns="follower_gravity" />
+    <param name="mit/enable_gravity" value="$(arg use_follower_gravity)" />
+    <param if="$(arg use_follower_gravity)" name="mit/gravity_mix_mode" value="additive" />
+    <param if="$(arg use_follower_gravity)" name="remap/joint_states_compensated_to" value="/robot/arm_left/follower_gravity_cmd" />
+    <param name="ctrl_mode" value="$(arg piper_ctrl_mode)" />
+    <param name="can_port" value="$(arg left_can_port)" />
+    <param name="auto_enable" value="$(arg auto_enable)" />
+    <param name="gripper_val_mutiple" value="$(arg left_gripper_val_mutiple)" />
+    <param name="gripper_cmd_limit_enable" value="$(arg gripper_cmd_limit_enable)" />
+    <param name="gripper_cmd_min_raw" value="$(arg gripper_cmd_min_raw)" />
+    <param name="gripper_cmd_max_raw" value="$(arg gripper_cmd_max_raw)" />
+    <param name="gripper_cmd_deadband_raw" value="$(arg gripper_cmd_deadband_raw)" />
+  </node>
+
+  <!-- Right arm controller -->
+  <node name="piper_ctrl_right_node" pkg="piper_ctrl" type="$(eval 'piper_ctrl_follower_node.py' if arg('use_follower_gravity') else 'piper_ctrl_node.py')" output="screen">
+    <rosparam file="$(find piper_ctrl)/config/piper_ctrl_mit.yaml" command="load"/>
+    <rosparam if="$(arg use_follower_gravity)" file="$(arg follower_gravity_config)" command="load" ns="follower_gravity" />
+    <param name="mit/enable_gravity" value="$(arg use_follower_gravity)" />
+    <param if="$(arg use_follower_gravity)" name="mit/gravity_mix_mode" value="additive" />
+    <param if="$(arg use_follower_gravity)" name="remap/joint_states_compensated_to" value="/robot/arm_right/follower_gravity_cmd" />
+    <param name="ctrl_mode" value="$(arg piper_ctrl_mode)" />
+    <param name="can_port" value="$(arg right_can_port)" />
+    <param name="auto_enable" value="$(arg auto_enable)" />
+    <param name="gripper_val_mutiple" value="$(arg right_gripper_val_mutiple)" />
+    <param name="gripper_cmd_limit_enable" value="$(arg gripper_cmd_limit_enable)" />
+    <param name="gripper_cmd_min_raw" value="$(arg gripper_cmd_min_raw)" />
+    <param name="gripper_cmd_max_raw" value="$(arg gripper_cmd_max_raw)" />
+    <param name="gripper_cmd_deadband_raw" value="$(arg gripper_cmd_deadband_raw)" />
+  </node>
+
+  <node if="$(arg use_follower_gravity)" name="follower_gravity_compensation" pkg="piper_ctrl"
+        type="follower_gravity_compensation.py" output="screen">
+    <rosparam file="$(arg follower_gravity_config)" command="load" />
+  </node>
+
+  <group if="$(arg enable_action_arbiter)">
+    <node pkg="piper_ctrl" type="dual_arm_action_arbiter.py" name="dual_arm_action_arbiter" output="screen">
+      <param name="rate" value="$(arg action_arbiter_rate_hz)" />
+      <param name="blend_sec" value="$(arg action_arbiter_blend_sec)" />
+      <param name="human_to_policy_blend_sec" value="$(arg action_arbiter_human_to_policy_blend_sec)" />
+      <param name="sync_to_human_blend_sec" value="$(arg action_arbiter_sync_to_human_blend_sec)" />
+      <param name="source_timeout_sec" value="$(arg action_arbiter_source_timeout_sec)" />
+      <param name="allow_fallback" value="$(arg action_arbiter_allow_fallback)" />
+      <param name="hold_last_on_timeout" value="$(arg action_arbiter_hold_last_on_timeout)" />
+      <param name="controlled_arm" value="$(arg action_arbiter_controlled_arm)" />
+      <param name="initial_mode" value="$(arg action_arbiter_initial_mode)" />
+      <param name="publish_follow_flag" value="$(arg action_arbiter_publish_follow_flag)" />
+      <param name="follow_flag_sync_value" value="$(arg action_arbiter_follow_flag_sync_value)" />
+      <param name="prepare_human_joint_tol_rad" value="$(arg action_arbiter_prepare_human_joint_tol_rad)" />
+      <param name="prepare_human_gripper_tol" value="$(arg action_arbiter_prepare_human_gripper_tol)" />
+      <param name="prepare_human_ready_hold_sec" value="$(arg action_arbiter_prepare_human_ready_hold_sec)" />
+      <param name="prepare_human_max_sec" value="$(arg action_arbiter_prepare_human_max_sec)" />
+      <param name="prepare_human_hold_reference" value="$(arg action_arbiter_prepare_human_hold_reference)" />
+      <param name="prepare_human_reference_source" value="$(arg action_arbiter_prepare_human_reference_source)" />
+      <param name="left_robot_state_topic" value="$(arg action_arbiter_left_robot_state_topic)" />
+      <param name="right_robot_state_topic" value="$(arg action_arbiter_right_robot_state_topic)" />
+      <param name="prepare_policy_min_sec" value="$(arg action_arbiter_prepare_policy_min_sec)" />
+      <param name="prepare_policy_bias_tau_sec" value="$(arg action_arbiter_prepare_policy_bias_tau_sec)" />
+      <param name="prepare_policy_enter_tol_rad" value="$(arg action_arbiter_prepare_policy_enter_tol_rad)" />
+      <param name="prepare_policy_max_sec" value="$(arg action_arbiter_prepare_policy_max_sec)" />
+      <param name="prepare_policy_include_gripper_bias" value="$(arg action_arbiter_prepare_policy_include_gripper_bias)" />
+      <param name="prepare_policy_hold_gripper" value="$(arg action_arbiter_prepare_policy_hold_gripper)" />
+      <param name="prepare_policy_gripper_handover_sec" value="$(arg action_arbiter_prepare_policy_gripper_handover_sec)" />
+      <param name="gripper_handover_sec" value="$(arg action_arbiter_gripper_handover_sec)" />
+
+      <param name="left_policy_topic" value="/robot/arm_left/vla_joint_cmd" />
+      <param name="right_policy_topic" value="/robot/arm_right/vla_joint_cmd" />
+      <param name="left_human_topic" value="/teleop/arm_left/joint_states_single" />
+      <param name="right_human_topic" value="/teleop/arm_right/joint_states_single" />
+
+      <param name="left_output_topic" value="/robot/arm_left/robot_cmd" />
+      <param name="right_output_topic" value="/robot/arm_right/robot_cmd" />
+      <param name="left_hold_topic" value="/intervention/arm_left/hold_joint_cmd" />
+      <param name="right_hold_topic" value="/intervention/arm_right/hold_joint_cmd" />
+
+      <param name="mode_cmd_topic" value="/intervention/mode_cmd" />
+      <param name="mode_topic" value="/intervention/mode" />
+      <param name="phase_topic" value="/intervention/phase" />
+      <param name="active_source_topic" value="/intervention/active_source" />
+      <param name="left_active_source_topic" value="/intervention/arm_left/active_source" />
+      <param name="right_active_source_topic" value="/intervention/arm_right/active_source" />
+      <param name="follow_flag_topic" value="/conrft_robot/slave_follow_flag" />
+      <param name="left_follow_flag_topic" value="/intervention/arm_left/slave_follow_flag" />
+      <param name="right_follow_flag_topic" value="/intervention/arm_right/slave_follow_flag" />
+    </node>
+
+    <node if="$(arg enable_arbiter_keyboard)"
+          pkg="piper_ctrl"
+          type="intervention_mode_keyboard.py"
+          name="intervention_mode_keyboard"
+          output="screen"/>
+
+    <node pkg="topic_tools" type="mux" name="mux_arm_left_joint"
+          args="/robot/arm_left/joint_cmd_mux
+                /robot/arm_left/robot_cmd
+                /teleop/arm_left/joint_states_single
+                /intervention/arm_left/hold_joint_cmd"
+          output="screen">
+      <remap from="/mux/selected" to="/robot/arm_left/joint_cmd_mux/selected" />
+      <param name="~default" value="$(arg action_arbiter_left_mux_source)" />
+    </node>
+
+    <node pkg="topic_tools" type="mux" name="mux_arm_right_joint"
+          args="/robot/arm_right/joint_cmd_mux
+                /robot/arm_right/robot_cmd
+                /teleop/arm_right/joint_states_single
+                /intervention/arm_right/hold_joint_cmd"
+          output="screen">
+      <remap from="/mux/selected" to="/robot/arm_right/joint_cmd_mux/selected" />
+      <param name="~default" value="$(arg action_arbiter_right_mux_source)"/>
+    </node>
+
+    <!-- Explicit init keeps compatibility with both service naming forms -->
+    <node pkg="rosservice" type="rosservice" name="init_mux_left"
+          args="call --wait /robot/arm_left/joint_cmd_mux_select $(arg action_arbiter_left_mux_source)"
+          output="screen"/>
+    <node pkg="rosservice" type="rosservice" name="init_mux_right"
+          args="call --wait /robot/arm_right/joint_cmd_mux_select $(arg action_arbiter_right_mux_source)"
+          output="screen"/>
+  </group>
+
+  <group unless="$(arg enable_action_arbiter)">
+    <node pkg="topic_tools" type="mux" name="mux_arm_left_joint"
+          args="/robot/arm_left/joint_cmd_mux
+                /teleop/arm_left/joint_states_single
+                /robot/arm_left/vla_joint_cmd
+                /intervention/teleop_handoff/arm_left/joint_states_single"
+          output="screen">
+      <remap from="/mux/selected" to="/robot/arm_left/joint_cmd_mux/selected" />
+      <param name="~default" value="/teleop/arm_left/joint_states_single" />
+    </node>
+
+    <node pkg="topic_tools" type="mux" name="mux_arm_right_joint"
+          args="/robot/arm_right/joint_cmd_mux
+                /teleop/arm_right/joint_states_single
+                /robot/arm_right/vla_joint_cmd
+                /intervention/teleop_handoff/arm_right/joint_states_single"
+          output="screen">
+      <remap from="/mux/selected" to="/robot/arm_right/joint_cmd_mux/selected" />
+      <param name="~default" value="/teleop/arm_right/joint_states_single"/>
+    </node>
+
+    <!-- Teleop profile defaults to human input and keeps vla topic available for manual switch. -->
+    <node pkg="rosservice" type="rosservice" name="init_mux_left"
+          args="call --wait /robot/arm_left/joint_cmd_mux_select /teleop/arm_left/joint_states_single"
+          output="screen"/>
+    <node pkg="rosservice" type="rosservice" name="init_mux_right"
+          args="call --wait /robot/arm_right/joint_cmd_mux_select /teleop/arm_right/joint_states_single"
+          output="screen"/>
+  </group>
+</launch>

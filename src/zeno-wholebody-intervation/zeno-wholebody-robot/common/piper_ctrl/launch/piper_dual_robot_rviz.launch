@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="enable_default_tf" default="true" />
+    <arg name="left_urdf_file" default="$(find piper_ctrl)/urdf/piper_description_left.urdf" />
+    <arg name="right_urdf_file" default="$(find piper_ctrl)/urdf/piper_description_right.urdf" />
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find piper_ctrl)/rviz/piper_dual_robot.rviz" />
+
+    <node name="joint_states_remap_left" pkg="bridge" type="joint_states_remap.py" output="screen">
+        <param name="joint_state_sub_topic" value="/robot/arm_left/joint_states_single" />
+        <param name="joint_state_pub_topic" value="/robot/arm_left/joint_states_single_no_gripper" />
+    </node>
+
+    <node name="joint_states_remap_right" pkg="bridge" type="joint_states_remap.py" output="screen">
+        <param name="joint_state_sub_topic" value="/robot/arm_right/joint_states_single" />
+        <param name="joint_state_pub_topic" value="/robot/arm_right/joint_states_single_no_gripper" />
+    </node>
+
+    <group ns="arm_left">
+        <param name="robot_description" textfile="$(arg left_urdf_file)" />
+        <node name="joint_states_publisher_left" pkg="joint_state_publisher" type="joint_state_publisher"
+            output="screen">
+            <rosparam param="source_list">[/robot/arm_left/joint_states_single_no_gripper]</rosparam>
+        </node>
+        <node name="robot_state_publisher_left" pkg="robot_state_publisher" type="robot_state_publisher">
+        </node>
+    </group>
+
+    <group ns="arm_right">
+        <param name="robot_description" textfile="$(arg right_urdf_file)" />
+        <node name="joint_states_publisher_right" pkg="joint_state_publisher" type="joint_state_publisher"
+            output="screen">
+            <rosparam param="source_list">[/robot/arm_right/joint_states_single_no_gripper]</rosparam>
+        </node>
+        <node name="robot_state_publisher_right" pkg="robot_state_publisher" type="robot_state_publisher">
+        </node>
+    </group>
+
+    <group if="$(arg enable_default_tf)">
+        <node pkg="tf2_ros" type="static_transform_publisher" name="arm_left_root"
+            args="0 0 0 0 0 0 world arm_left/dummy_link" />
+        <node pkg="tf2_ros" type="static_transform_publisher" name="arm_right_root"
+            args="1 0 0 0 0 0 world arm_right/dummy_link" />
+    </group>
+</launch>

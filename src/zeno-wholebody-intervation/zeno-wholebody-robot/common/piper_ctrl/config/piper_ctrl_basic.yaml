@@ -1,0 +1,82 @@
+# Piper robot arm control node configuration file
+# All parameters can be set via ROS parameter server
+
+# Basic parameters
+# CAN port name
+can_port: "can0"
+
+# Topic prefix, default is /, can be set to /teleop/arm_left/ or /robot/arm_right/ etc.
+topic_prefix: "/"
+
+# Auto enable, default false
+auto_enable: false
+
+# Gripper exists, default true
+gripper_exist: true
+
+# Gripper value multiple, default 1.0
+gripper_val_mutiple: 1.0
+
+# Control mode
+# Control method: 'p' (position control) or 'mit' (MIT control)
+ctrl_mode: "p" # Optional values: "p", "mit"
+
+# Position control parameters (used when ctrl_mode is 'p')
+p:
+  # Speed parameter, range 0-100
+  speed: 50
+
+  # Position command topic name (relative path, will automatically add topic_prefix as prefix)
+  # Example: if topic_prefix is "/teleop/arm_left/", the actual topic will be "/teleop/arm_left/joint_pos_cmd"
+  # If an absolute path (starting with /) is provided, the leading / will be automatically removed and topic_prefix will be added
+  joint_pos_cmd_topic: "joint_pos_cmd"
+
+# MIT control parameters (used when ctrl_mode is 'mit')
+mit:
+  # Speed parameter, range 0-100
+  speed: 50
+
+  # Proportional gain
+  kp: 10.0
+
+  # Derivative gain
+  kd: 0.8
+
+  # Enable position control
+  enable_pos: true
+
+  # Enable velocity control
+  enable_vel: true
+
+  # Enable torque control
+  enable_tor: true
+
+  # Enable gravity compensation
+  enable_gravity: false
+
+  # Torque scale factor, can be a single value (applied to all joints) or a list of 6 values (one for each joint)
+  # Single value example: torque_scale: 1.0
+  # List example: torque_scale: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+  torque_scale: 1.0
+
+  # Position command topic name (relative path, will automatically add topic_prefix as prefix)
+  joint_pos_cmd_topic: "joint_pos_cmd"
+
+  # Velocity command topic name (relative path, will automatically add topic_prefix as prefix)
+  joint_vel_cmd_topic: "joint_vel_cmd"
+
+  # Torque command topic name (relative path, will automatically add topic_prefix as prefix)
+  joint_tor_cmd_topic: "joint_tor_cmd"
+
+  # Gravity compensation topic name (relative path, will automatically add topic_prefix as prefix, used when enable_gravity is true)
+  joint_states_compensated_topic: "joint_states_compensated"
+
+# Thread rate parameters
+# Publish thread rate (Hz)
+publish_rate: 200.0
+
+# Control thread rate (Hz)
+control_rate: 200.0
+
+# Subscribe thread rate (Hz)
+subscribe_rate: 100.0

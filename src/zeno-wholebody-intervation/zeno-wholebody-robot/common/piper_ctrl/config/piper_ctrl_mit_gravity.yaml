@@ -1,0 +1,77 @@
+# Piper robot arm MIT/Position control parameters (with gravity compensation)
+# This file is for TELEOP mode with gravity compensation enabled
+# For node-specific parameters (can_port, topics, gripper), see piper_dual.yaml
+
+# =============================================================================
+# Control Mode
+# =============================================================================
+# Control method: 'p' (position control) or 'mit' (MIT control)
+ctrl_mode: "mit"  # Optional values: "p", "mit"
+
+# =============================================================================
+# Position Control Parameters (used when ctrl_mode is 'p')
+# =============================================================================
+p:
+  # Speed parameter, range 0-100
+  speed: 30
+
+# =============================================================================
+# MIT Control Parameters (used when ctrl_mode is 'mit')
+# =============================================================================
+mit:
+  # Speed parameter, range 0-100
+  speed: 50
+
+  # Proportional gain (lower values for teleop/gravity compensation mode)
+  # Can be single value or list of 6 for each joint
+  kp: [0.02, 0.08, 0.08, 0.04, 0.08, 0.08]
+
+  # Derivative gain
+  # Can be single value or list of 6 for each joint
+  kd: [0.03, 0.04, 0.003, 0.04, 0.04, 0.04]
+
+  # Enable position control
+  enable_pos: true
+
+  # Enable velocity control
+  enable_vel: false
+
+  # Enable torque control
+  enable_tor: true
+
+  # Enable gravity compensation (key difference from piper_ctrl_mit.yaml)
+  enable_gravity: true
+
+  # Gravity + torque command mixing mode:
+  # - additive:   output = gravity + torque_cmd * torque_scale  (stable default)
+  # - legacy_diff:output = -(torque_cmd - gravity) * torque_scale + gravity
+  # - gravity_only: output = gravity
+  gravity_mix_mode: "legacy_diff"
+
+  # Torque scale factor for gravity compensation
+  # Can be single value or list of 6 for each joint
+  torque_scale: [0.2, 0.15, 0.6, 0.5, 0.15, 0.6]
+
+# =============================================================================
+# Thread Rate Parameters
+# =============================================================================
+# Publish thread rate (Hz)
+publish_rate: 100.0
+
+# Control thread rate (Hz)
+control_rate: 50.0
+
+# Subscribe thread rate (Hz)
+subscribe_rate: 50.0
+
+# =============================================================================
+# Filter Parameters for smoothing published data
+# =============================================================================
+filter:
+  # Enable filter
+  enable: true
+
+  # Filter alpha values (0.0-1.0), higher = less smoothing but faster response
+  alpha_position: 0.7
+  alpha_velocity: 0.5
+  alpha_effort: 0.5

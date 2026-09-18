@@ -1,0 +1,113 @@
+<?xml version="1.0"?>
+<!--
+MLP-based Reachability Mask Node Launch File
+
+This launch file starts the reachability-aware point cloud masking node.
+
+Usage:
+  roslaunch piper_reachable_region reachability_mask.launch \
+    model_path:=/path/to/model.pth \
+    config_path:=/path/to/config.json \
+    input_cloud_topic:=/camera/depth/points
+
+Parameters (with defaults):
+  - model_path: Path to trained PyTorch model (model.pth)
+  - config_path: Path to model configuration (config.json)
+  - input_cloud_topic: Input PointCloud2 topic (default: /env_cloud)
+  - output_cloud_topic: Output masked cloud topic (default: /reachable_cloud)
+  - target_frame: Robot base frame (default: base_link)
+  - p_reach_threshold: Reachability probability threshold (default: 0.5)
+  - min_manip: Minimum manipulability threshold (default: 0.0)
+  - use_soft_masking: Use soft masking instead of hard masking (default: false)
+  - device: PyTorch device, 'cpu' or 'cuda' (default: cpu)
+-->
+
+<launch>
+     <!-- Arguments with defaults -->
+     <arg name="model_path" default="$(find piper_reachable_region)/model/model.pth" doc="Path to trained model.pth file" />
+     <!-- <arg name="model_path" default="/home/jeong/zeno/wholebody-teleop/teleop/trained_model/model.pth" doc="Path to trained model.pth file" /> -->
+     <arg name="config_path" default="$(find piper_reachable_region)/model/config.json" doc="Path to config.json file" />
+     <!-- <arg name="config_path" default="/home/jeong/zeno/wholebody-teleop/teleop/trained_model/config.json" doc="Path to config.json file" /> -->
+     <arg name="input_cloud_topic" default="/realsense_top/depth/color/points" doc="Input PointCloud2 topic name" />
+     <!-- <arg name="output_cloud_topic" default="/reachable_cloud" doc="Output masked PointCloud2 topic name" /> -->
+     <!-- <arg name="target_frame" default="arm_left/base_link" doc="Target frame for point cloud transformation" /> -->
+     <arg name="p_reach_threshold" default="0.9" doc="Reachability probability threshold [0, 1]" />
+     <arg name="min_manip" default="0.2" doc="Minimum manipulability threshold for filtering" />
+     <arg name="downsample_rate" default="1" doc="Downsample rate (1 = no downsampling, 10 = keep every 10th point)" />
+     <arg name="use_soft_masking" default="false" doc="Use soft masking (color by reachability) instead of hard masking" />
+     <arg name="device" default="cuda" doc="PyTorch device: 'cpu' or 'cuda'" />
+     <arg name="log_level" default="info" doc="ROS node log level: debug, info, warn, error, fatal" />
+
+     <arg name="enable_reachability_publisher" default="true" doc="Enable reachability publisher" />
+
+     <!-- Reachability Mask Node -->
+     <node pkg="piper_reachable_region" type="reachability_mask_node.py" name="reachability_mask_left" respawn="true" output="screen">
+
+          <!-- Model and Configuration -->
+          <param name="model_path" value="$(arg model_path)" />
+          <param name="config_path" value="$(arg config_path)" />
+
+          <!-- Topic Configuration -->
+          <param name="input_cloud_topic" value="$(arg input_cloud_topic)" />
+          <!-- <param name="output_cloud_topic" value="$(arg output_cloud_topic)" /> -->
+          <param name="output_cloud_topic" value="/robot/arm_left/reachable_region" />
+
+          <!-- Frame and Transform Configuration -->
+          <!-- <param name="target_frame" value="$(arg target_frame)" /> -->
+          <param name="target_frame" value="arm_left/base_link" />
+
+          <!-- Masking Configuration -->
+          <param name="p_reach_threshold" value="$(arg p_reach_threshold)" />
+          <param name="min_manip" value="$(arg min_manip)" />
+          <param name="downsample_rate" value="$(arg downsample_rate)" />
+          <param name="use_soft_masking" value="$(arg use_soft_masking)" />
+
+          <!-- Device Configuration -->
+          <param name="device" value="$(arg device)" />
+
+          <!-- Logging -->
+          <env name="ROSCONSOLE_FORMAT" value="[${severity}] [${node}]: ${message}" />
+     </node>
+
+     <node pkg="piper_reachable_region" type="reachability_mask_node.py" name="reachability_mask_right" respawn="true" output="screen">
+
+          <!-- Model and Configuration -->
+          <param name="model_path" value="$(arg model_path)" />
+          <param name="config_path" value="$(arg config_path)" />
+
+          <!-- Topic Configuration -->
+          <param name="input_cloud_topic" value="$(arg input_cloud_topic)" />
+          <!-- <param name="output_cloud_topic" value="$(arg output_cloud_topic)" /> -->
+          <param name="output_cloud_topic" value="/robot/arm_right/reachable_region" />
+
+          <!-- Frame and Transform Configuration -->
+          <!-- <param name="target_frame" value="$(arg target_frame)" /> -->
+          <param name="target_frame" value="arm_right/base_link" />
+
+          <!-- Masking Configuration -->
+          <param name="p_reach_threshold" value="$(arg p_reach_threshold)" />
+          <param name="min_manip" value="$(arg min_manip)" />
+          <param name="downsample_rate" value="$(arg downsample_rate)" />
+          <param name="use_soft_masking" value="$(arg use_soft_masking)" />
+
+          <!-- Device Configuration -->
+          <param name="device" value="$(arg device)" />
+
+          <!-- Logging -->
+          <env name="ROSCONSOLE_FORMAT" value="[${severity}] [${node}]: ${message}" />
+     </node>
+
+     <group if="$(arg enable_reachability_publisher)">
+          <node pkg="piper_reachable_region" type="publisher.py" name="reachability_publisher_left" output="screen">
+               <param name="hdf5_path" value="$(find piper_reachable_region)/maps/3D_reach_map_gripper_base_0.05_2025-12-11-17-29-20.h5" />
+               <param name="frame_id" value="arm_left/base_link" />
+               <param name="reachability_pub_topic" value="/robot/arm_left/reachability_cloud" />
+          </node>
+          <node pkg="piper_reachable_region" type="publisher.py" name="reachability_publisher_right" output="screen">
+               <param name="hdf5_path" value="$(find piper_reachable_region)/maps/3D_reach_map_gripper_base_0.05_2025-12-11-17-29-20.h5" />
+               <param name="frame_id" value="arm_right/base_link" />
+               <param name="reachability_pub_topic" value="/robot/arm_right/reachability_cloud" />
+          </node>
+     </group>
+
+</launch>

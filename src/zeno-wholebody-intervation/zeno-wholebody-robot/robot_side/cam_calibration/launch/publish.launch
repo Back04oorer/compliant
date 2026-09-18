@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 发布 handeye TF（gripper -> camera, base -> top camera） -->
+    <!-- 可选：指定特定标定文件；若为空自动选择最新 handeye_data_*.json -->
+    <node pkg="cam_calibration" type="tf_publisher.py" name="handeye_tf_publisher_left" output="screen">
+        <param name="samples_dir" value="$(find cam_calibration)/data/samples/left" />
+        <param name="parent_frame" value="arm_left/gripper_base" />
+        <param name="child_frame" value="realsense_left_color_optical_frame" />
+        <param name="top_parent_frame" value="arm_left/dummy_link"/>
+        <param name="top_child_frame" value="arm_left/realsense_top_color_optical_frame"/>
+        <param name="publish_wrist" value="true"/>
+        <param name="wrist_reverse" value="false"/>
+        <param name="publish_top" value="true"/>
+        <param name="top_reverse" value="true"/>
+        <param name="publish_rate" value="100.0" />
+        <param name="trajectory_file" value="" />
+    </node>
+
+    <node pkg="cam_calibration" type="tf_publisher.py" name="handeye_tf_publisher_right" output="screen">
+        <param name="samples_dir" value="$(find cam_calibration)/data/samples/right" />
+        <param name="parent_frame" value="arm_right/gripper_base" />
+        <param name="child_frame" value="realsense_right_color_optical_frame" />
+        <param name="top_parent_frame" value="arm_right/dummy_link"/>
+        <param name="top_child_frame" value="arm_right/realsense_top_color_optical_frame"/>
+        <param name="publish_wrist" value="true"/>
+        <param name="wrist_reverse" value="false"/>
+        <param name="publish_top" value="true"/>
+        <param name="top_reverse" value="true"/>
+        <param name="publish_rate" value="100.0" />
+        <param name="trajectory_file" value="" />
+    </node>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="arm_left_cam"
+            args="0 0 0 0 0 0 realsense_top_color_optical_frame arm_left/realsense_top_color_optical_frame" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="arm_right_cam"
+            args="0 0 0 0 0 0 realsense_top_color_optical_frame arm_right/realsense_top_color_optical_frame" />
+</launch>

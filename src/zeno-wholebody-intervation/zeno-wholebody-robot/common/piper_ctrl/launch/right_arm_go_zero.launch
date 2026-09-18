@@ -1,0 +1,32 @@
+<launch>
+  <!--
+    One-shot right-arm home/zero launch.
+    It calls /robot/arm_right/go_zero_srv once and exits.
+  -->
+  <arg name="allow_motion" default="false" />
+  <arg name="require_lfv_allow_env" default="true" />
+  <arg name="is_mit_mode" default="true" />
+  <arg name="wait_timeout_sec" default="10.0" />
+  <arg name="post_hold_sec" default="1.0" />
+  <arg name="hold_rate_hz" default="50.0" />
+
+  <arg name="go_zero_service" default="/robot/arm_right/go_zero_srv" />
+  <arg name="state_topic" default="/robot/arm_right/joint_states_single" />
+  <arg name="cmd_topic" default="/robot/arm_right/vla_joint_cmd" />
+
+  <node pkg="piper_ctrl"
+        type="right_arm_go_zero_once.py"
+        name="right_arm_go_zero_once"
+        output="screen"
+        required="true">
+    <param name="allow_motion" value="$(arg allow_motion)" />
+    <param name="require_lfv_allow_env" value="$(arg require_lfv_allow_env)" />
+    <param name="is_mit_mode" value="$(arg is_mit_mode)" />
+    <param name="wait_timeout_sec" value="$(arg wait_timeout_sec)" />
+    <param name="post_hold_sec" value="$(arg post_hold_sec)" />
+    <param name="hold_rate_hz" value="$(arg hold_rate_hz)" />
+    <param name="go_zero_service" value="$(arg go_zero_service)" />
+    <param name="state_topic" value="$(arg state_topic)" />
+    <param name="cmd_topic" value="$(arg cmd_topic)" />
+  </node>
+</launch>
