@@ -17,6 +17,7 @@
 
 ## 从这里开始
 
+0. [环境安装配方与四路 CAN 配置](docs/00_installation.md)（含 ROS Dockerfile、SDK/训练安装脚本）
 1. [环境、CAN、启动与遥操](docs/01_startup.md)
 2. [两种重力补偿与安全边界](docs/02_gravity.md)
 3. [采集、时间对齐、数据转换](docs/03_data.md)

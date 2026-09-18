@@ -1,5 +1,8 @@
 # 1. 环境、启动和遥操
 
+新机器优先看 [环境安装与四路 CAN](00_installation.md)：已提供 ROS 镜像构建配方、
+依赖安装脚本及统一四路 CAN 预检/激活入口。下文保留手动安装与单路激活说明。
+
 ## 环境分开
 
 - Robot：Ubuntu 20.04 / ROS Noetic / Python 3.8，使用系统 ROS Python。
@@ -16,7 +19,7 @@ sudo apt-get install -y can-utils ethtool iproute2 python3-pip python3-numpy pyt
   ros-noetic-topic-tools ros-noetic-robot-state-publisher ros-noetic-joint-state-publisher \
   ros-noetic-xacro ros-noetic-usb-cam ros-noetic-cv-bridge \
   ros-noetic-image-transport ros-noetic-compressed-image-transport ros-noetic-rviz ros-noetic-serial \
-  ros-noetic-controller-manager ros-noetic-hardware-interface ros-noetic-controller-interface \
+  ros-noetic-controller-manager ros-noetic-control-msgs ros-noetic-hardware-interface ros-noetic-controller-interface \
   ros-noetic-realtime-tools ros-noetic-pluginlib
 python3 -m pip install piper_sdk==0.6.1 python-can==4.5.0
 bash scripts/bootstrap_ros.sh

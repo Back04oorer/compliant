@@ -12,7 +12,7 @@ def manifest():
     files = {}
     for directory in ("src", "training", "workspaces/scripts", "workspaces/config"):
         for path in sorted((ROOT / directory).rglob("*")):
-            if not path.is_file() or any(p in {"__pycache__", ".pytest_cache"} for p in path.parts):
+            if not path.is_file() or any(p in {"__pycache__", ".pytest_cache"} or p.endswith(".egg-info") for p in path.parts):
                 continue
             files[str(path.relative_to(ROOT))] = hashlib.sha256(path.read_bytes()).hexdigest()
     return {"snapshot_date": "2026-09-18", "training_upstream": "https://github.com/pairlab-usyd/Stereo-patch",

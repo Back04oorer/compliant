@@ -9,6 +9,10 @@
 - `training`：Stereo-patch `26290bcd247f1fb373a517a7057f66fd40ef1198` 完整已跟踪源码快照，
   另补本机 ACT-HF trainer。保留原 Apache-2.0 LICENSE/NOTICE。不是训练数据或 checkpoint。
 - `scripts/piper.py`、`scripts/train_act.py` 与分章指南：本次新增的独立通用入口。
+- `scripts/setup_environment.py`、`scripts/setup_can.py`、`requirements/`、`docker/`：
+  新增环境安装配方和四路 CAN 工具，不包含本机真实 USB 地址。
+  训练快照的 `training/requirements.txt` 有一项集成修正：NumPy 从 `<2` 改为 `>=2.2,<2.3`，
+  解决 LeRobot 0.4.4 间接依赖与 OpenCV 的约束冲突；来源哈希已同步更新。
 
 `SOURCE_MANIFEST.json` 记录源码快照各文件 SHA256，以便之后与运行目录对照。
 部分继承的脚本保留历史参考绝对路径，不应直接当作别的机器配置执行。
@@ -29,6 +33,21 @@
 入口测试7项、训练契约测试10项、follower guard测试13项通过；8项依赖ROS的测试在主机跳过。
 这不等于在空白 Ubuntu 上从零安装全部依赖，也没有对新入口重新做硬件运动或 GPU smoke 验收。
 因此这是整理后的源码与可验证入口，不是已在所有机器即插即用的认证系统。
+
+### 安装配方补充验收（2026-09-18）
+
+- 已从官方 `ros:noetic-ros-base-focal` 的固定 digest 构建新镜像（不是沿用本机自定义镜像）。
+  实际执行 apt/Piper SDK 安装、10 个 catkin 包编译；初次构建发现缺少 `control_msgs`，
+  已补入安装清单并重新构建成功。
+- 使用 `--network none`、不映射 CAN/相机/GPU 的临时容器运行 `scripts/check_robot_env.py`：
+  follower 驱动、补偿模块、ROS 消息与 SDK 导入成功，URDF 离线重力计算为有限数值。
+  验证版本：Piper SDK 0.6.1、python-can 4.5.0、Pinocchio 3.3.0。
+- 安装/CAN/通用入口共24项测试通过，训练契约10项、follower guard13项通过，
+  共47项通过；主机8项依赖ROS的测试仍跳过。CAN单测使用模拟接口，不在实物上改接口状态。
+- 用 uv 对 Python 3.10/Linux x86_64 的 `requirements/training.txt` 完成依赖解析。
+  没有新装 GPU 训练环境，没有进行新的训练 smoke，也没有执行真实遥操或运动验收。
+
+上述结果补充了初次整理的验证范围，仍不代表任意硬件配置无需检查即可直接运动。
 
 GitHub Actions 配置保存在 `docs/ci/offline-checks.yml`，目前是未启用的模板。
 上传账号缺少 `workflow` scope；使用具备该权限的账号将模板复制到

@@ -7,7 +7,9 @@ huggingface-hub==0.35.3
 safetensors==0.7.0
 torchcodec==0.10.0
 einops==0.8.2
-numpy>=1.26,<2
+# LeRobot's rerun-sdk >=0.24 and OpenCV 4.12 require NumPy 2.
+# ROS uses a separate Python environment; never install this into ROS Python.
+numpy>=2.2,<2.3
 pandas==2.3.3
 pyarrow==23.0.1
 opencv-python-headless>=4.11,<5

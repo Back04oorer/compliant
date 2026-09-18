@@ -2,6 +2,9 @@
 
 ## 环境与资源
 
+推荐使用 [独立训练环境安装入口](00_installation.md#3-独立训练环境)，会固定主要版本、
+隔离 ROS Python，并执行 `pip check` 和 TorchCodec 导入检查。下面保留手动安装方式。
+
 新建与 ROS 分开的 Python 3.10+ 环境。按 GPU 驱动安装兼容的 torch/torchvision，再：
 
 ```bash

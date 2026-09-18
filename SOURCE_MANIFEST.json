@@ -282,7 +282,7 @@
     "training/lerobot_policy_stereo_shared/trainable_ema.py": "1b143c9c4f684781b3588a7321eee1d3e75b1a25c277ee923af6cec2292576ec",
     "training/pyproject.toml": "7767f9a2460926778c12bff4f9f4de1ecc0e95a31cd4bd2682691a06698dfc79",
     "training/requirements-dev.txt": "8636f9ab1a075be9f3039e2a6471837259c4f36b625bcaf7a3d9a1edd2419c6d",
-    "training/requirements.txt": "f8cf7a79873d4ac1b2bef53da4d719fd8c7aa63433836be69a4ee1036d1bc7ba",
+    "training/requirements.txt": "1c615995b3e90b4dc495fd5492a51de89cda690a51770f39355e65f39d47e3bb",
     "training/scripts/__init__.py": "f3246501ddfec300d352cbf1371c9e8fc890f9ce6830b906ca6997486aadc4bc",
     "training/scripts/build_active_arm_lerobot_subset.py": "e9dcce0f15d8fdfad9673f5ce46f2437397f67532436679e8f9b2268f3bbbd63",
     "training/scripts/check_environment.py": "a139a351b449a91bc1d07bb7b10dcb98b0b5895ddf46054815c1be910d0b92ed",

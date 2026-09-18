@@ -4,6 +4,13 @@
   "robot_right_can": "can_sr",
   "teleop_left_can": "can_left",
   "teleop_right_can": "can_right",
+  "can_bitrate": 1000000,
+  "can_usb_ports": {
+    "robot_left_can": "",
+    "robot_right_can": "",
+    "teleop_left_can": "",
+    "teleop_right_can": ""
+  },
   "gravity_joint_scale": [0.28, 0.28, 0.28, 0.95, 0.95, 0.95],
   "enable_cameras": false,
   "enable_rviz": false,

@@ -9,7 +9,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
-SKIP = {".git", "__pycache__", ".pytest_cache", ".venv", "ws_robot"}
+SKIP = {".git", "__pycache__", ".pytest_cache", ".venv", "ws_robot", "external"}
 
 
 def main():
@@ -22,7 +22,7 @@ def main():
     )]
     for path in sorted(ROOT.rglob("*")):
         rel = path.relative_to(ROOT)
-        if any(p in SKIP or p.endswith(".egg-info") for p in rel.parts) or not path.is_file():
+        if any(p in SKIP or p.startswith(".venv") or p.endswith(".egg-info") for p in rel.parts) or not path.is_file():
             continue
         counts["files"] += 1
         if path.is_symlink():

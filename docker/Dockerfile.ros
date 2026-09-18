@@ -1,0 +1,12 @@
+# Build only: no device mappings, ROS master, CAN activation or arm enable.
+ARG ROS_IMAGE=ros:noetic-ros-base-focal@sha256:72b8bc59035dc0a5b8e07aae28c16caa84192971d72d207c72ed734fb1d5e97d
+FROM ${ROS_IMAGE}
+WORKDIR /opt/piper
+COPY requirements/ requirements/
+COPY scripts/setup_environment.py scripts/setup_environment.py
+RUN python3 scripts/setup_environment.py ros --execute
+COPY . .
+RUN bash scripts/bootstrap_ros.sh && bash workspaces/scripts/build_robot_ws.sh
+RUN bash -c 'source workspaces/ws_robot/devel/setup.bash && python3 scripts/check_robot_env.py'
+# Source workspaces explicitly when using multiple terminals; no auto-start.
+CMD ["bash"]

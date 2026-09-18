@@ -1,0 +1,8 @@
+# Core versions read from the local training environment, 2026-09-18.
+# This is not a complete transitive lockfile; the installer runs pip check.
+-r ../training/requirements.txt
+torch==2.10.0
+torchvision==0.25.0
+numpy==2.2.6
+opencv-python-headless==4.12.0.88
+rerun-sdk==0.26.2
