@@ -21,6 +21,26 @@ def inventory():
     return links
 
 
+def ensure_drivers_stopped(interfaces, proc_root=Path('/proc')):
+    drivers = ('piper_ctrl_', 'piper_teleop_', 'piper_gravity_', 'follower_gravity_')
+    launches = {'start_robot_all.launch', 'start_teleop_all.launch',
+                'piper_dual_robot.launch', 'piper_dual_teleop.launch'}
+    for path in proc_root.glob('[0-9]*/cmdline'):
+        try:
+            names = [Path(arg).name for arg in path.read_bytes().decode(errors='replace').split('\0') if arg]
+        except FileNotFoundError:
+            continue
+        if any(name.startswith(drivers) or name in launches for name in names):
+            raise ValueError(f'CAN controller is running (PID {path.parent.name}); stop drivers and compensation first.')
+    # Host-network receive lists also expose CAN users outside this container.
+    devices = set(interfaces) | {'any'}
+    for path in (proc_root / 'net/can').glob('rcvlist*'):
+        for line in path.read_text().splitlines():
+            fields = line.split()
+            if fields and fields[0] in devices:
+                raise ValueError(f'CAN socket is active on {fields[0]}; stop CAN users before initialization.')
+
+
 def plan(cfg, links):
     if cfg.get("hardware_reviewed") is not True:
         raise ValueError("Set hardware_reviewed=true only after physically verifying all four arm roles.")
@@ -65,6 +85,7 @@ def main():
     parser.add_argument("--config", type=Path, default=ROOT / "config/hardware.local.json")
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--drivers-stopped", action="store_true", help="Operator confirms all CAN drivers and controllers are stopped")
+    parser.add_argument("--check-drivers-stopped", action="store_true", help="Check controller processes and CAN sockets before activation (TUI)")
     args = parser.parse_args()
     try:
         links = inventory()
@@ -80,11 +101,13 @@ def main():
         if not args.execute:
             print("PREVIEW ONLY. No interfaces changed; no robot commands sent.")
             return 0
-        if not args.drivers_stopped:
+        if not (args.drivers_stopped or args.check_drivers_stopped):
             raise ValueError("Stop robot/leader/gravity controllers before activation; then pass --drivers-stopped.")
         # Recheck before the first mutation; refuse if interface state changed.
         if plan(cfg, inventory()) != (commands, mapping):
             raise ValueError("CAN inventory changed after preflight; review and retry.")
+        if commands and args.check_drivers_stopped:
+            ensure_drivers_stopped([item['current'] for item in mapping])
         for command in commands:
             subprocess.run(sudo + command, check=True)
         remaining, checked = plan(cfg, inventory())

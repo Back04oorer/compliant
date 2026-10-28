@@ -1,5 +1,15 @@
 # 来源、许可与验证范围
 
+Top 双目鱼眼标定入口调用外部仓库
+`https://github.com/Back04oorer/fisheye_calibration`，固定 commit
+`6ea4206ab2b1279171ee04a27990178b9992db57`。
+源码保存在 Git 忽略的 `external/` 中，通过 `scripts/setup_calibration.sh` 获取；
+本仓库提供 TUI 入口和原生 MJPEG 相机适配，复用上游标定、验证及导出流程。
+`patches/fisheye-bottom-ab.patch` 保存 Bottom A/B 采集及验证目标、提示圈和回归测试的局部修改，
+由安装脚本应用到上述固定版本；完整上游源码仍从外部仓库获取。
+该版本未发现独立 LICENSE 文件，不将外部源码归入本仓库许可。
+使用范围见[相机标定指南](06_camera_calibration.md)。
+
 整理日期：2026-09-18。
 
 - `src/zeno-wholebody-intervation/zeno-wholebody-robot`：当前本机 ros1_docker-main 工作代码，

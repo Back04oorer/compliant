@@ -2,14 +2,25 @@
 import ctypes
 import errno
 import fcntl
+import logging
 import mmap
 import os
+from pathlib import Path
 import select
+import sys
 import time
 from typing import List, Tuple
 
-import rospy
-from sensor_msgs.msg import CameraInfo, CompressedImage
+try:
+    import rospy
+    from sensor_msgs.msg import CameraInfo, CompressedImage
+except ModuleNotFoundError as exc:
+    if exc.name not in {"rospy", "sensor_msgs", "sensor_msgs.msg"}:
+        raise
+    rospy = None
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[6] / 'scripts'))
+from camera_access import open_camera
 
 
 VIDIOC_G_FMT = 0xC0D05604
@@ -21,10 +32,21 @@ VIDIOC_DQBUF = 0xC0585611
 VIDIOC_STREAMON = 0x40045612
 VIDIOC_STREAMOFF = 0x40045613
 VIDIOC_S_PARM = 0xC0CC5616
+VIDIOC_S_CTRL = 0xC008561C
+
+V4L2_CID_EXPOSURE_AUTO = 0x009A0901
+V4L2_EXPOSURE_APERTURE_PRIORITY = 3
 
 V4L2_BUF_TYPE_VIDEO_CAPTURE = 1
 V4L2_FIELD_NONE = 1
 V4L2_MEMORY_MMAP = 1
+
+
+def _log(level, message, *args):
+    if rospy is not None:
+        getattr(rospy, "log" + level)(message, *args)
+    else:
+        getattr(logging.getLogger(__name__), {"warn": "warning"}.get(level, level))(message, *args)
 
 
 def _fourcc(token: str) -> int:
@@ -43,6 +65,10 @@ def _fourcc_to_str(value: int) -> str:
             (value >> 24) & 0xFF,
         )
     ).decode("ascii", errors="replace")
+
+
+class V4L2Control(ctypes.Structure):
+    _fields_ = [("id", ctypes.c_uint32), ("value", ctypes.c_int32)]
 
 
 class V4L2PixFormat(ctypes.Structure):
@@ -159,10 +185,60 @@ class V4L2Buffer(ctypes.Structure):
 
 
 class DirectMjpgCamera:
+    @classmethod
+    def capture_only(cls, device, width, height, fps=30):
+        """Read native JPEGs, including host-shared descriptors, without ROS publishers."""
+        if width <= 0 or height <= 0 or fps <= 0:
+            raise ValueError("Capture dimensions and FPS must be positive")
+        camera = cls.__new__(cls)
+        camera.video_device = device
+        camera.width, camera.height, camera.fps = width, height, fps
+        camera.buffer_count, camera.select_timeout_sec = 4, 1.0
+        camera.enforce_resolution = camera.enforce_mjpg = True
+        # Preserve exposure chosen by the operator during calibration.
+        camera.auto_exposure = False
+        camera.fd, camera.buffers, camera.streaming = -1, [], False
+        try:
+            camera._open_once()
+        except BaseException:
+            camera.close()
+            raise
+        return camera
+
+    def read_jpeg(self):
+        """Return a native frame, or None on a bounded wait with no frame."""
+        ready, _, _ = select.select([self.fd], [], [], self.select_timeout_sec)
+        if not ready:
+            return None
+        buf = V4L2Buffer()
+        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE
+        buf.memory = V4L2_MEMORY_MMAP
+        try:
+            fcntl.ioctl(self.fd, VIDIOC_DQBUF, buf, True)
+        except OSError as exc:
+            if exc.errno in (errno.EAGAIN, errno.EINTR):
+                return None
+            raise
+        try:
+            mapped, length = self.buffers[int(buf.index)]
+            if not 0 < int(buf.bytesused) <= length:
+                raise ValueError("Invalid MJPEG buffer length")
+            frame = bytes(mapped[:int(buf.bytesused)])
+            if not frame.startswith(b"\xff\xd8"):
+                raise ValueError("Camera returned a non-JPEG frame")
+            return frame
+        finally:
+            self._queue_buffer(int(buf.index))
+
     def __init__(self) -> None:
         self.video_device = str(rospy.get_param("~video_device", "/dev/video0"))
         self.width = int(rospy.get_param("~image_width", 640))
         self.height = int(rospy.get_param("~image_height", 480))
+        self.output_width = int(rospy.get_param("~output_width", 0))
+        self.output_height = int(rospy.get_param("~output_height", 0))
+        if not ((self.output_width == 0 and self.output_height == 0)
+                or (self.output_width > 0 and self.output_height > 0)):
+            raise ValueError("output_width/output_height must both be positive or both zero")
         self.fps = int(rospy.get_param("~framerate", 30))
         self.frame_id = str(rospy.get_param("~camera_frame_id", "top_cam_color_optical_frame"))
         self.buffer_count = int(rospy.get_param("~buffer_count", 4))
@@ -170,6 +246,7 @@ class DirectMjpgCamera:
         self.select_timeout_sec = float(rospy.get_param("~select_timeout_sec", 1.0))
         self.enforce_resolution = _as_bool(rospy.get_param("~enforce_actual_resolution", True))
         self.enforce_mjpg = _as_bool(rospy.get_param("~enforce_actual_pixel_format", True))
+        self.auto_exposure = _as_bool(rospy.get_param("~auto_exposure", False))
 
         self.image_pub = rospy.Publisher("image_raw/compressed", CompressedImage, queue_size=2)
         self.info_pub = rospy.Publisher("camera_info", CameraInfo, queue_size=2)
@@ -188,9 +265,13 @@ class DirectMjpgCamera:
                 time.sleep(self.open_retry_sleep_sec)
 
     def _open_once(self) -> None:
-        self.fd = os.open(self.video_device, os.O_RDWR | os.O_NONBLOCK)
+        self.fd = open_camera(self.video_device)
         self._set_format()
         self._set_fps()
+        if self.auto_exposure:
+            control = V4L2Control(V4L2_CID_EXPOSURE_AUTO, V4L2_EXPOSURE_APERTURE_PRIORITY)
+            fcntl.ioctl(self.fd, VIDIOC_S_CTRL, control, True)
+            _log("info", "Automatic exposure enabled: device=%s", self.video_device)
         fmt = self._get_format()
         actual_width = int(fmt.fmt.pix.width)
         actual_height = int(fmt.fmt.pix.height)
@@ -203,7 +284,7 @@ class DirectMjpgCamera:
             raise RuntimeError(f"pixel format mismatch: requested MJPG, got {actual_fourcc}")
         self._init_mmap()
         self._stream_on()
-        rospy.loginfo(
+        _log("info",
             "Top MJPG camera ready: device=%s actual=%dx%d %s fps=%d buffers=%d",
             self.video_device,
             actual_width,
@@ -226,7 +307,7 @@ class DirectMjpgCamera:
             current = self._get_format()
             if exc.errno != errno.EIO or _fourcc_to_str(int(current.fmt.pix.pixelformat)) != "MJPG":
                 raise
-            rospy.logwarn("VIDIOC_S_FMT returned EIO, but current device format is already MJPG; continuing.")
+            _log("warn", "VIDIOC_S_FMT returned EIO, but current device format is already MJPG; continuing.")
 
     def _get_format(self) -> V4L2Format:
         fmt = V4L2Format()
@@ -244,7 +325,7 @@ class DirectMjpgCamera:
         except OSError as exc:
             if exc.errno != errno.EIO:
                 raise
-            rospy.logwarn("VIDIOC_S_PARM returned EIO; continuing with current driver FPS.")
+            _log("warn", "VIDIOC_S_PARM returned EIO; continuing with current driver FPS.")
 
     def _init_mmap(self) -> None:
         req = V4L2RequestBuffers()
@@ -273,6 +354,8 @@ class DirectMjpgCamera:
             self._queue_buffer(index)
 
     def _queue_buffer(self, index: int) -> None:
+        if self.fd < 0:
+            return
         buf = V4L2Buffer()
         buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE
         buf.memory = V4L2_MEMORY_MMAP
@@ -337,12 +420,26 @@ class DirectMjpgCamera:
             finally:
                 try:
                     self._queue_buffer(int(buf.index))
-                except OSError as exc:
-                    rospy.logerr("VIDIOC_QBUF failed: %s; reopening camera.", exc)
+                except (OSError, ValueError) as exc:
+                    if not rospy.is_shutdown():
+                        rospy.logerr("VIDIOC_QBUF failed: %s; reopening camera.", exc)
                     self.close()
             rate.sleep()
 
-    def _publish_frame(self, frame: bytes, stamp: rospy.Time) -> None:
+    def _publish_frame(self, frame: bytes, stamp: "rospy.Time") -> None:
+        if self.output_width:
+            import cv2
+            import numpy as np
+            image = cv2.imdecode(np.frombuffer(frame, dtype=np.uint8), cv2.IMREAD_COLOR)
+            if image is None:
+                rospy.logwarn_throttle(2.0, "Failed to decode recording camera JPEG")
+                return
+            image = cv2.resize(image, (self.output_width, self.output_height), interpolation=cv2.INTER_AREA)
+            ok, encoded = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            if not ok:
+                rospy.logwarn_throttle(2.0, "Failed to encode recording camera JPEG")
+                return
+            frame = encoded.tobytes()
         msg = CompressedImage()
         msg.header.stamp = stamp
         msg.header.frame_id = self.frame_id
@@ -352,8 +449,8 @@ class DirectMjpgCamera:
 
         info = CameraInfo()
         info.header = msg.header
-        info.width = self.width
-        info.height = self.height
+        info.width = self.output_width or self.width
+        info.height = self.output_height or self.height
         self.info_pub.publish(info)
 
     def close(self) -> None:

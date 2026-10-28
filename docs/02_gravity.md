@@ -6,7 +6,7 @@
 | 驱动 | `piper_ctrl_node.py` | `piper_ctrl_follower_node.py` |
 | 输入 | `/teleop/arm_*/joint_states_single` | `/robot/arm_*/joint_states_single` |
 | 配置 | 启动参数 gravity_joint_scale | `piper_ctrl/config/follower_gravity.yaml` |
-| 启动 | 独立 `gravity-teleop` | 随 follower MIT launch 一起启动 |
+| 启动 | 随 `teleop` 驱动一起启动 | 随 follower MIT launch 一起启动 |
 
 当前继承的缩放系数两侧均为 `[0.28,0.28,0.28,0.95,0.95,0.95]`。
 这是现有设备经验值，不是通用准确的牛米换算，换工具/负载/安装方向必须重新验证。

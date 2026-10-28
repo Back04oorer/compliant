@@ -1,0 +1,112 @@
+diff --git a/camera_calib_charuco/stereo_calibration/cli.py b/camera_calib_charuco/stereo_calibration/cli.py
+index a2befba..c3a92bf 100644
+--- a/camera_calib_charuco/stereo_calibration/cli.py
++++ b/camera_calib_charuco/stereo_calibration/cli.py
+@@ -4,6 +4,7 @@ import argparse
+ import json
+ 
+ from . import __version__
++from .config import PRESETS
+ 
+ 
+ def main():
+@@ -21,7 +22,7 @@ def main():
+     gui.add_argument("--width", type=int, default=2560)
+     gui.add_argument("--height", type=int, default=720)
+     gui.add_argument("--fps", type=int, default=30)
+-    gui.add_argument("--board", choices=("existing-20mm", "a4-30mm"), default="existing-20mm")
++    gui.add_argument("--board", choices=PRESETS, default="stereo-charuco-7x5-38-a4-v1")
+     gui.add_argument("--output", default="sessions", help="Directory for new sessions")
+     gui.add_argument("--port", type=int, default=8765)
+     gui.add_argument("--no-browser", action="store_true")
+@@ -39,7 +40,7 @@ def main():
+     )
+     board_parser = commands.add_parser("board", help="Generate a true-size A4 ChArUco PDF")
+     board_parser.add_argument(
+-        "--preset", choices=("existing-20mm", "a4-30mm"), default="existing-20mm"
++        "--preset", choices=PRESETS, default="stereo-charuco-7x5-38-a4-v1"
+     )
+     board_parser.add_argument(
+         "--output", help="Output PDF path (default: output/pdf/charuco-PRESET.pdf)"
+@@ -51,7 +52,6 @@ def main():
+         from pathlib import Path
+ 
+         from .boards import pdf
+-        from .config import PRESETS
+ 
+         path = Path(args.output or f"output/pdf/charuco-{args.preset}.pdf")
+         path.parent.mkdir(parents=True, exist_ok=True)
+@@ -65,7 +65,7 @@ def main():
+ 
+         import uvicorn
+ 
+-        from .config import PRESETS, CameraConfig
++        from .config import CameraConfig
+         from .controller import Controller
+         from .web import create_app
+         from .workspace import Workspace
+diff --git a/camera_calib_charuco/stereo_calibration/config.py b/camera_calib_charuco/stereo_calibration/config.py
+index dd3b5c9..cb8cc98 100644
+--- a/camera_calib_charuco/stereo_calibration/config.py
++++ b/camera_calib_charuco/stereo_calibration/config.py
+@@ -64,6 +64,10 @@ class BoardConfig:
+ 
+ 
+ PRESETS = {
++    "stereo-charuco-7x5-38-a4-v1": BoardConfig(
++        columns=7, rows=5, square_mm=38.0, marker_mm=30.0,
++        dictionary="DICT_APRILTAG_25h9", legacy=False,
++    ),
+     "existing-20mm": BoardConfig(),
+     "a4-30mm": BoardConfig(columns=8, rows=6, square_mm=30.0, marker_mm=22.5),
+ }
+diff --git a/camera_calib_charuco/stereo_calibration/static/app.js b/camera_calib_charuco/stereo_calibration/static/app.js
+index 4055fbc..ca9da81 100644
+--- a/camera_calib_charuco/stereo_calibration/static/app.js
++++ b/camera_calib_charuco/stereo_calibration/static/app.js
+@@ -91,7 +91,7 @@ function selectedBoard() {
+ function boardInfo() {
+     if (!presets) return;
+     const b = selectedBoard();
+-    set('boardMeta', `${b.columns} × ${b.rows} squares · ${number(b.square_mm)} / ${number(b.marker_mm)} mm · ${b.dictionary} · legacy layout`);
++    set('boardMeta', `${b.columns} × ${b.rows} squares · ${number(b.square_mm)} / ${number(b.marker_mm)} mm · ${b.dictionary} · ${b.legacy ? 'legacy' : 'modern'} layout`);
+     $('boardPreview').src = `/api/board.png?preset=${encodeURIComponent($('preset').value)}`;
+     $('downloadBoard').href = `/api/board.pdf?preset=${encodeURIComponent($('preset').value)}`;
+ }
+diff --git a/camera_calib_charuco/stereo_calibration/static/index.html b/camera_calib_charuco/stereo_calibration/static/index.html
+index 56aae86..f5f6aff 100644
+--- a/camera_calib_charuco/stereo_calibration/static/index.html
++++ b/camera_calib_charuco/stereo_calibration/static/index.html
+@@ -23,8 +23,8 @@
+     <div class="setup-copy"><h2>Match your board</h2><p>Print at <strong>100%</strong>. Measure the squares and mount flat.</p><img id="boardPreview" src="/api/board.png" alt="Selected ChArUco board layout"><p class="board-meta" id="boardMeta"></p></div>
+     <form id="setupForm">
+       <div class="form-grid">
+-        <label class="span-2">Board preset<select id="preset"><option value="existing-20mm">Existing PDF · 11 × 8 · 20 mm squares</option><option value="a4-30mm">A4 larger features · 8 × 6 · 30 mm squares</option></select></label>
+-        <label>Measured square length <span>(mm)</span><input id="square" type="number" step="0.01" value="20" min="0.01" required></label>
++        <label class="span-2">Board preset<select id="preset"><option value="stereo-charuco-7x5-38-a4-v1">A4 AprilTag · 7 × 5 · 38 / 30 mm</option><option value="existing-20mm">Existing PDF · 11 × 8 · 20 mm squares</option><option value="a4-30mm">A4 larger features · 8 × 6 · 30 mm squares</option></select></label>
++        <label>Measured square length <span>(mm)</span><input id="square" type="number" step="0.01" value="38" min="0.01" required></label>
+         <label>Camera<input id="device" value="0" list="devices" required><datalist id="devices"></datalist></label>
+         <label>Full stereo width<input id="width" type="number" step="2" value="2560" required></label>
+         <label>Image height<input id="height" type="number" value="720" required></label>
+@@ -32,7 +32,7 @@
+         <label class="check"><input id="swap" type="checkbox"> Swap left and right</label>
+       </div>
+       <p class="hint">Move closer if the board is not detected.</p>
+-      <div class="form-actions"><button type="submit" id="apply">Apply settings</button><a class="text-link" id="downloadBoard" href="/api/board.pdf?preset=existing-20mm">Print this board ↗</a><span id="settingsStatus">Settings ready</span></div>
++      <div class="form-actions"><button type="submit" id="apply">Apply settings</button><a class="text-link" id="downloadBoard" href="/api/board.pdf?preset=stereo-charuco-7x5-38-a4-v1">Print this board ↗</a><span id="settingsStatus">Settings ready</span></div>
+     </form>
+   </section>
+   <div class="workspace">
+diff --git a/camera_calib_charuco/stereo_calibration/web.py b/camera_calib_charuco/stereo_calibration/web.py
+index 7762d91..b49cf09 100644
+--- a/camera_calib_charuco/stereo_calibration/web.py
++++ b/camera_calib_charuco/stereo_calibration/web.py
+@@ -325,7 +325,7 @@ def create_app(controller, port=8765):
+         return FileResponse(path, media_type="image/png", filename=path.name)
+ 
+     @app.get("/api/board.pdf")
+-    def printable_board(preset: str = "existing-20mm"):
++    def printable_board(preset: str = "stereo-charuco-7x5-38-a4-v1"):
+         from .boards import pdf
+ 
+         if preset not in PRESETS:

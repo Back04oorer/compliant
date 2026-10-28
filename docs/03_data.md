@@ -1,17 +1,58 @@
 # 3. 数据采集、转换和单臂抽取
 
+TUI 的 session、数据集、JSON 和输出目录均支持列表浏览、`/` 筛选与 Tab 手输路径；
+Esc 返回，输入错误留在当前项修改。转换仍拒绝活动录制、BAD_ROSBAG 和已存在的输出。
+操作说明见 [TUI 统一选择与输入](01_startup.md#tui-selection-and-input)。
+
 ## 采集
 
 ```bash
-python3 scripts/piper.py record --session my_task          # 预览
-python3 scripts/piper.py record --session my_task --execute
+python3 scripts/teleop_tui.py --execute   # 主菜单 r，在实时预览弹窗里选择相机角色
+# 同一功能的命令行预览（添加 --execute 才启动）：
+python3 scripts/piper.py record --session my_task \
+  --camera left=/dev/video0 --camera top=/dev/video2
 ```
 
-SPACE 开始/停止 episode；K 删除最近一条；Q 退出并等后台保存完成。
-默认录三路压缩 RGB、双臂 robot state（position/effort/velocity）、teleop state、
+SPACE 开始/停止 episode；K 删除最近一条；Q 结束录制、等待保存完成并退出。
+录制在前台显示 ACTIVE、episode 和时长（每 0.5 秒刷新）；停止后在前台显示 SAVING 和
+保存校验阶段的进度条，输出 PASS/ALERT 后才回到 READY，随后可开始下一条。
+保存未结束时禁止开始下一条；保存期间按下的空格会被丢弃，READY 后需重新按空格。
+相机选择弹窗同时显示实时画面，每路下方可选择 Left wrist / Right wrist / Top / Skip。
+点击 Confirm（或 Enter）继续，Cancel / Esc / 关闭窗口取消；未选相机不会录制。
+相同角色重新分配时会替换旧相机，避免左右标签混淆。预览设备全部释放后才启动正式录制。
+Left wrist / Right wrist / Top 可任选一个、两个或三个；每个视角需要一个独立的已映射相机。
+当前 `/dev/video0`、`/dev/video2`、`/dev/video4` 三台设备均可用；未映射的第三台
+通过宿主机相机访问服务直接交给容器内驱动，无需重建容器或停止机械臂。默认输出 680×480、30 FPS；本机使用原生 640×480 MJPEG，
+驱动在发布压缩 RGB 前缩放为 680×480。图像未标定，不生成深度。
+每次打开录制相机时自动设置 UVC 自动曝光（`auto_exposure=3`），包括驱动重开设备时。
+因此断电重插后无需手动调曝光；仍需确保设备映射有效或宿主机相机访问服务正在运行。
+未选视角不录制也不检查。还录制双臂 robot state（position/effort/velocity）、teleop state、
 **机器人实际 mux 命令作为 action 标签**。原始 bag 不提交到 Git，不自动上传或删除。
 `metadata.json`/`BAD_ROSBAG.txt` 记录健康状态；PASS 是采集质量检查，不代表任务成功。
 不把背景数据处理完成当作下一条物体已摆好的证明。
+
+session 根目录保存 `recording_cameras.json`（设备、角色、输出尺寸、原生尺寸、话题）
+和 `recording_profile.json`。同名 session 不能混入不同相机映射或尺寸，变更时使用新 session。
+上述路径直接启动所选相机，退出录制器并保存完成后关闭；不要另开驱动占用同一设备。
+不带 `--camera` 的旧命令仍使用原三路录制 profile，并要求其相机话题已运行。
+
+本机双相机实测：分别映射为 Left wrist 与 Top 时，两路 ROS 压缩图均约 30 FPS，
+测试 bag 中 JPEG 均为 680×480，且不包含未选的 Right wrist。录制器也完成了保存和设备释放。
+该测试未启动机械臂数据流，完整健康检查会因缺少 arm topics 标记 BAD；
+正式训练数据仍须在遥操运行时录制并通过完整检查。
+
+## TUI 中转换普通 RGB 数据
+
+主菜单 `c` 提供普通 RGB 转换表单，调用同一个转换器，输出双臂 state28/action14、
+30 Hz、mux 标签和 LeRobot v3 格式。新 session 根据 `recording_cameras.json` 只转换选中的
+RGB 视角，默认沿用录制尺寸。旧 session 没有该文件时仍手动填写：`mono` 输入真实单目压缩图话题；
+旧双目拼接顶部图选择 `sbs`，提供 calibration JSON 与 processing metadata JSON，
+仅进行标定裁剪，不生成深度或加载外部模型。左右腕图使用当前录制 profile 的话题。
+缺少/过期标定不能靠直接缩小整幅拼接图代替。
+
+TUI 会拒绝覆盖已有输出，拒绝仍有 `.bag.active` 或带 `BAD_ROSBAG.txt` 的 session。
+转换使用 `--training-python` 指定的独立训练环境；预览模式只打印命令。
+其他字段选择、单臂抽取或自定义相机话题仍使用下面的命令行入口。
 
 ## 时间对齐
 

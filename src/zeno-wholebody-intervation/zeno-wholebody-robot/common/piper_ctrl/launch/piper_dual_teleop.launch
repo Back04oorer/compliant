@@ -24,19 +24,19 @@
   <arg name="mit_enable_pos" default="true" />
   <arg name="mit_max_torque_abs" default="18.0" />
   <arg name="launch_prefix" default="" />
-  <!-- 
+  <!--
     Piper Dual Teleop Launch
-    
+
     Parameter loading order:
     1. piper_ctrl_mit_gravity.yaml - Control parameters with gravity compensation
-    2. piper_dual.yaml - Node-specific parameters (can_port, topics, gripper)
-    
-    piper_dual.yaml is loaded to root namespace where node name keys 
+    2. piper_dual_teleop.yaml - Node-specific parameters (can_port, topics, gripper)
+
+    piper_dual_teleop.yaml is loaded to root namespace where node name keys
     (e.g., piper_teleop_left_node) map to each node's private namespace.
   -->
 
-  <!-- Load node-specific parameters once to avoid cross-node overwrite races -->
-  <rosparam file="$(find piper_ctrl)/config/piper_dual.yaml" command="load" ns="/"/>
+  <!-- Load only this role; never overwrite the other running drivers. -->
+  <rosparam file="$(find piper_ctrl)/config/piper_dual_teleop.yaml" command="load" ns="/"/>
 
   <!-- Left arm node -->
   <node name="piper_teleop_left_node" pkg="piper_ctrl" type="$(arg left_ctrl_node_type)" output="screen" launch-prefix="$(arg launch_prefix)">
@@ -59,7 +59,7 @@
     <param name="mit/enable_pos" value="$(arg mit_enable_pos)" />
     <param name="mit/max_torque_abs" value="$(arg mit_max_torque_abs)" />
   </node>
-  
+
   <!-- Right arm node -->
   <node name="piper_teleop_right_node" pkg="piper_ctrl" type="$(arg right_ctrl_node_type)" output="screen" launch-prefix="$(arg launch_prefix)">
     <!-- Load control parameters (with gravity compensation) to node's private namespace -->

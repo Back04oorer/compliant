@@ -1170,14 +1170,7 @@ class Recorder:
             if info.get("state") == "done":
                 result = info.get("result") or {}
                 status_text = str(result.get("save_status", "OK"))
-                if self.save_progress_mode == "compact":
-                    self._emit_save_completion(str(info.get("episode_name")), result)
-                else:
-                    line = (
-                        f"[save][job={job_id}][{info.get('episode_name')}] DONE "
-                        f"status={status_text} metadata={result.get('metadata_path')}"
-                    )
-                    self._print_colored(line, color=self._status_color(status_text))
+                self._emit_save_completion(str(info.get("episode_name")), result)
                 if self.save_progress_mode != "compact" and status_text.upper() in ("WARN", "BAD"):
                     self._emit_chinese_save_warning(job_id, str(info.get("episode_name")), result)
             else:
@@ -1223,6 +1216,8 @@ class Recorder:
         print(f"Optional     : {'all' if self.record_all_optional_topics else 'present-only'}")
         print(f"Next episode : episode_{self.next_episode_index:03d}")
         print(f"Save workers : {self.save_workers} ({self.save_progress_mode} ui)")
+        if self.args.wait_for_save:
+            print("Save mode    : foreground; wait for progress and PASS/ALERT before the next episode")
         self._print_colored("Keys         : SPACE start/stop | K delete last | Q quit", color="dim")
         self._divider()
         print("")
@@ -1253,6 +1248,17 @@ class Recorder:
             return None
         return max(candidates)
 
+    def _drain_saving_keys(self) -> None:
+        if not sys.stdin.isatty():
+            return
+        fd = sys.stdin.fileno()
+        while select.select([fd], [], [], 0)[0]:
+            key = os.read(fd, 1)
+            if not key:
+                break
+            if key in (b"q", b"Q"):
+                self.shutdown_requested = True
+
     def _wait_for_episode_save_job(self, episode_name: str) -> None:
         job_id = self._find_save_job_for_episode(episode_name)
         if job_id is None:
@@ -1264,6 +1270,8 @@ class Recorder:
             state = str(info.get("state", ""))
             if state not in ("queued", "running"):
                 break
+            if self.args.wait_for_save:
+                self._drain_saving_keys()
             self._emit_save_progress(force=False)
             time.sleep(0.2)
         self._emit_save_progress(force=True)
@@ -2467,6 +2475,10 @@ class Recorder:
     def _start_episode(self) -> None:
         if self.recording:
             return
+        if self._pending_save_count():
+            self._print_colored("[record] SAVING previous episode; wait for completion, then press SPACE again.", color="yellow")
+            self._emit_save_progress(force=True)
+            return
 
         ok_master, master_msg = self._ros_master_ok()
         if not ok_master:
@@ -2670,12 +2682,20 @@ class Recorder:
         print(f"[record] stop_utc={ended_utc}")
         print(f"[record] stop_local={stop_local}")
         print(f"[record] duration={self._format_duration(duration_sec)}")
-        self._print_colored(
-            f"[save] queued job={save_job_id} episode={episode_name} (saving in background)",
-            color="dim",
-        )
-        print(f"[record] next=episode_{self.next_episode_index:03d}")
-        self._emit_save_progress(force=True)
+        if self.args.wait_for_save:
+            self._print_colored(f"[save] SAVING {episode_name}; waiting for file finalization and checks...", color="cyan")
+            sys.stdout.flush()
+            self._wait_for_episode_save_job(episode_name)
+            self._drain_saving_keys()
+            if not self.shutdown_requested:
+                print(f"[record] READY next=episode_{self.next_episode_index:03d} | SPACE start | Q quit", flush=True)
+        else:
+            self._print_colored(
+                f"[save] queued job={save_job_id} episode={episode_name} (saving in background)",
+                color="dim",
+            )
+            print(f"[record] next=episode_{self.next_episode_index:03d}")
+            self._emit_save_progress(force=True)
 
     def _atexit_cleanup(self) -> None:
         if self.recording:
@@ -2726,7 +2746,8 @@ class Recorder:
                         self._emit_runtime_status(force=False)
                         continue
 
-                    ch = sys.stdin.read(1)
+                    # Read one byte so Python cannot buffer SPACE through a save.
+                    ch = os.read(sys.stdin.fileno(), 1).decode("ascii", errors="ignore")
                     now = time.monotonic()
 
                     if ch == " ":
@@ -2828,6 +2849,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.5,
         help="Interval for recording status printing while active.",
+    )
+    parser.add_argument(
+        "--wait-for-save",
+        action="store_true",
+        help="Wait in the foreground for each episode's save progress and health result before accepting the next episode.",
     )
     parser.add_argument(
         "--save-workers",

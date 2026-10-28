@@ -1,5 +1,7 @@
 # Ubuntu 20.04 + ROS Noetic (ROS apt repository already configured).
 build-essential
+libx11-dev
+libxcb1-dev
 cmake
 git
 sudo

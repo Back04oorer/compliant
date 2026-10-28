@@ -1,0 +1,17 @@
+# Extend the project's already-built ROS image with an isolated model runtime.
+ARG ROS_IMAGE=piper-ros-noetic:local
+FROM ghcr.io/astral-sh/uv:0.10.9@sha256:10902f58a1606787602f303954cea099626a4adb02acbac4c69920fe9d278f82 AS uv
+FROM ${ROS_IMAGE}
+COPY --from=uv /uv /usr/local/bin/uv
+WORKDIR /opt/piper
+COPY requirements/inference.txt requirements/inference.txt
+COPY scripts/setup_inference.sh scripts/setup_inference.sh
+ARG INFERENCE_TORCH_INDEX=https://download.pytorch.org/whl/cu128
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+RUN INFERENCE_TORCH_INDEX=${INFERENCE_TORCH_INDEX} bash scripts/setup_inference.sh
+COPY scripts/ scripts/
+COPY config/rgb_act_execution.json config/rgb_act_execution.json
+COPY docs/ docs/
+COPY README.md README.md
+# Keep system Python as the default for ROS/TUI; only model processes use the venv.
+CMD ["bash"]

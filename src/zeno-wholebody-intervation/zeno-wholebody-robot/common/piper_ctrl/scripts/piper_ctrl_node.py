@@ -598,8 +598,8 @@ class C_PiperCtrlNode:
             # Get effort from gripper command if haptic is enabled
             if self.enable_gripper_haptic:
                 with self.gripper_cmd_lock:
-                    gripper_effort = -self.gripper_cmd_effort
-                    gripper_effort = max(0, min(gripper_effort, 0.5))
+                    gripper_effort = -self.gripper_cmd_effort * 0.2
+                    gripper_effort = max(0, min(gripper_effort, 0.15))
                     gripper_effort = round(gripper_effort * 1000)
             else:
                 gripper_effort = round(3 * 1000)

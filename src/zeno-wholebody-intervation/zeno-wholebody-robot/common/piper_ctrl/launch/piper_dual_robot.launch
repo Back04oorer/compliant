@@ -51,7 +51,7 @@
   <arg name="action_arbiter_prepare_policy_hold_gripper" default="true" />
   <arg name="action_arbiter_prepare_policy_gripper_handover_sec" default="0.25" />
   <arg name="action_arbiter_gripper_handover_sec" default="0.20" />
-  <!-- Gripper command shaping on robot side (can override piper_dual.yaml defaults). -->
+  <!-- Gripper command shaping on robot side (can override piper_dual_robot.yaml defaults). -->
   <arg name="robot_gripper_open_scale" default="1.0" />
   <arg name="left_gripper_val_mutiple" default="$(arg robot_gripper_open_scale)" />
   <arg name="right_gripper_val_mutiple" default="$(arg robot_gripper_open_scale)" />
@@ -61,7 +61,7 @@
   <arg name="gripper_cmd_deadband_raw" default="200" />
 
   <!-- Load node-specific parameters once to avoid cross-node overwrite races. -->
-  <rosparam file="$(find piper_ctrl)/config/piper_dual.yaml" command="load" ns="/"/>
+  <rosparam file="$(find piper_ctrl)/config/piper_dual_robot.yaml" command="load" ns="/"/>
 
   <!-- Left arm controller -->
   <node name="piper_ctrl_left_node" pkg="piper_ctrl" type="$(eval 'piper_ctrl_follower_node.py' if arg('use_follower_gravity') else 'piper_ctrl_node.py')" output="screen">
@@ -104,7 +104,7 @@
     <rosparam file="$(arg follower_gravity_config)" command="load" />
   </node>
 
-  <group if="$(arg enable_action_arbiter)">
+  <group if="$(eval arg('enable_action_arbiter'))">
     <node pkg="piper_ctrl" type="dual_arm_action_arbiter.py" name="dual_arm_action_arbiter" output="screen">
       <param name="rate" value="$(arg action_arbiter_rate_hz)" />
       <param name="blend_sec" value="$(arg action_arbiter_blend_sec)" />
@@ -190,7 +190,7 @@
           output="screen"/>
   </group>
 
-  <group unless="$(arg enable_action_arbiter)">
+  <group if="$(eval not arg('enable_action_arbiter'))">
     <node pkg="topic_tools" type="mux" name="mux_arm_left_joint"
           args="/robot/arm_left/joint_cmd_mux
                 /teleop/arm_left/joint_states_single

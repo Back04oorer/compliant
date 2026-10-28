@@ -42,7 +42,7 @@ class DriverDiagnostics:
             return
         can_id = message.arbitration_id
         if (
-            can_id in [0x2A1, 0x2A5, 0x2A6, 0x2A7]
+            can_id in [0x2A1, 0x2A5, 0x2A6, 0x2A7, 0x2A8]
             or 0x251 <= can_id <= 0x256
             or 0x261 <= can_id <= 0x266
         ):
@@ -84,6 +84,10 @@ class DriverDiagnostics:
             "positions_rad": q,
             "velocities_rad_s": dq,
             "driver_command": command,
+            "gripper_enabled": bool(
+                driver.piper.GetArmGripperMsgs().gripper_state.foc_status.driver_enable_status
+            ),
+            "gripper_feedback_age_s": ages([0x2A8])[0],
             "gripper_width_m": float(driver.joint_states.position[6]),
             "joint_feedback_age_s": ages([0x2A5, 0x2A5, 0x2A6, 0x2A6, 0x2A7, 0x2A7]),
             "speed_feedback_age_s": ages(range(0x251, 0x257)),
@@ -97,6 +101,7 @@ class DriverDiagnostics:
             "command_topic": topic,
             "gripper_topic": driver.gripper_pos_cmd_topic,
             "ctrl_mode": int(status.ctrl_mode),
+            "arm_status": int(status.arm_status),
             "teach_status": int(status.teach_status),
             "mode_feedback": int(status.mode_feed),
             "expected_mode_feedback": 4 if driver.ctrl_mode == "mit" else 1,

@@ -2,8 +2,8 @@
   "hardware_reviewed": false,
   "robot_left_can": "can_sl",
   "robot_right_can": "can_sr",
-  "teleop_left_can": "can_left",
-  "teleop_right_can": "can_right",
+  "teleop_left_can": "can_ml",
+  "teleop_right_can": "can_mr",
   "can_bitrate": 1000000,
   "can_usb_ports": {
     "robot_left_can": "",

@@ -1,0 +1,18 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Piper · 实时施力对比</title><link rel="stylesheet" href="/replay.css"><script type="module" src="/replay.js"></script></head>
+<body data-mode="live"><header><a href="/replay.html">← 动画回放</a><span>PIPER / LIVE COMPARISON</span></header><main>
+<p class="eyebrow">LIVE · THREE POLICIES · ONE FORCE</p><h1>拖动末端，同时推动三个版本。</h1>
+<p class="intro">20000 / 8000 / FirstPPo · 相同模型、相同外力 · 固定夹爪 · K = 100 N/m</p>
+<section class="controls" aria-label="实时施力控制">
+<label>推力 <input id="amplitude" type="number" min="0" max="5" step="0.1" value="2"> N</label>
+<input id="amplitude-slider" type="range" min="0" max="5" step="0.1" value="2" aria-label="推力大小">
+<label>拖动方向 <select id="plane"><option value="screen">跟随屏幕方向</option><option value="X">仅 X</option><option value="Y">仅 Y</option><option value="Z">仅 Z</option></select></label>
+<label>观测 <select id="noise"><option value="clean">无噪声</option><option value="noisy">训练同级噪声</option></select></label>
+<button id="connect">连接实时仿真</button><button id="live-pause" disabled>暂停</button><button id="live-reset" disabled>重置姿态</button><button id="release" disabled>立即撤力</button><button id="camera">重置视角</button>
+<div class="push-row"><span>按住施力，松开撤力：</span><button data-push="-X">−X</button><button data-push="+X">+X</button><button data-push="-Y">−Y</button><button data-push="+Y">+Y</button><button data-push="-Z">−Z</button><button data-push="+Z">+Z</button></div>
+<div class="status"><strong id="phase">正在加载机械臂…</strong><output id="clock">0.00 s</output><span id="force">外力 0.00 N</span></div>
+</section><p id="notice" role="status">按住任一窗口末端的彩色圆点并拖动，三个版本同时受力；松开立即撤力。拖动空白区域旋转视角，滚轮缩放。按 Esc 撤力。</p>
+<div id="worlds" class="worlds live-worlds"></div>
+<p class="footnote">力大小由上方数值设定，拖动只决定方向。橙色箭头表示实际施力方向；橙色圆环为柔顺目标。图中实线为三维参考位置误差，虚线为柔顺目标位移。末端目标位置为原始位置 + F/K。</p>
+<p class="footnote">服务端运行与评估一致的 Isaac 仿真和冻结策略；网页显示实时状态，不控制真机。切换噪声会重置三个版本。关闭或离开页面会撤力，网络中断时仿真暂停；一次仅一个页面控制，其他页面可继续看回放。</p>
+</main></body></html>

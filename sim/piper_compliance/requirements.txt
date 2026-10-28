@@ -1,0 +1,4 @@
+mujoco==3.3.7
+numpy==1.26.4
+matplotlib>=3.6,<4
+Pillow>=10,<12

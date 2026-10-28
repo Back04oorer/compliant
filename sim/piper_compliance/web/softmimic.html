@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Piper / SoftMimic 训练</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/softmimic.css">
+  <script src="/softmimic.js" defer></script>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="/">PIPER / COMPLIANCE LAB</a><span id="status" role="status">读取进度中…</span></header>
+  <main>
+    <div class="page-heading"><div><p class="eyebrow">PIPER · SOFTMIMIC</p><h1>训练概览<span>。</span></h1><p id="run-description" class="intro">固定姿态柔顺控制</p></div></div>
+    <section id="rollouts" aria-labelledby="rollouts-heading">
+      <div class="section-heading"><h2 id="rollouts-heading">不同推力 · 动画对比</h2><a class="text-link" href="/replay.html">全屏查看 ↗</a></div>
+      <p class="note">20000、8000、FirstPPo 与解析基线同步回放。下方选择 0.5–5 N 推力及 XYZ 方向；训练 Run 选择仅影响后面的训练曲线。</p>
+      <iframe id="rollout-frame" src="/replay.html" title="不同推力下的机械臂 rollout 动画对比"></iframe>
+    </section>
+    <p><a class="outline-button" href="/soft-live.html">↗ 实时施力对比 · 拖动末端 / 自定义推力</a></p>
+    <div class="run-picker"><label for="run-select">训练 Run</label><select id="run-select"><option value="BalancedPush_v1">BalancedPush_v1</option><option value="FirstPPo">FirstPPo</option></select><span id="run-kind"></span></div>
+    <div class="training-summary">
+      <div><span>PPO 更新</span><strong id="iteration">—</strong></div>
+      <div><span>本次运行用时</span><strong id="elapsed">—</strong></div>
+      <div><span>预计剩余训练时间</span><strong id="remaining">—</strong></div>
+    </div>
+    <progress id="progress" max="100000" value="0" aria-label="PPO 更新进度"></progress>
+    <section aria-labelledby="curves-heading">
+      <div class="section-heading"><h2 id="curves-heading">训练指标</h2><span class="note">浅线：原始值 · 深线：平滑趋势</span></div>
+      <p id="curve-status" class="note" role="status">正在读取历史日志…</p>
+      <div id="curves" class="curve-grid"></div>
+    </section>
+    <details class="training-notes">
+      <summary>训练说明与历史评估</summary>
+      <p>曲线来自当前训练目录的 TensorBoard 日志，每 15 秒检查更新。点击图片可查看大图或保存。平滑采用 EMA α=0.1；超过 4,000 点时等间隔抽样显示，完整日志仍保留。</p>
+      <p>位置和力误差为随机训练环境中每轮 rollout 的均值；奖励为最近结束回合的平均累计回报。训练指标不代表独立受推和撤力恢复评估，PPO 损失不必单调下降。</p>
+      <p>使用固定提交 823582557d54 的官方 SoftMimic 方法和 PPO 配置，适配固定基座 Piper，夹爪锁定。Actor 不读取外力；critic 在训练时读取特权信息。模拟器为 Isaac Sim 5.1 / IsaacLab 2.3.1。</p>
+      <p id="run-info"></p>
+    </details>
+  </main>
+</body>
+</html>

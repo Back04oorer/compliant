@@ -1,0 +1,32 @@
+main { max-width: 1240px; padding-bottom: 48px; }
+.topbar #status { font-size: 12px; color: var(--oracle); text-align: right; }
+.page-heading { padding: 36px 0 28px; }
+.run-picker { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; font-size: 12px; color: var(--muted); }
+.run-picker select { max-width: 100%; font-size: 13px; background: white; padding: 10px 12px; }
+.training-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; padding: 22px 26px; background: white; border: 1px solid var(--line); border-radius: 10px; }
+.training-summary span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.training-summary strong { font-size: clamp(16px, 2.2vw, 25px); font-weight: 550; font-variant-numeric: tabular-nums; }
+#progress { width: 100%; height: 5px; margin-top: 14px; accent-color: var(--oracle); }
+.section-heading { margin-bottom: 8px; }
+.section-heading .note { margin: 0; }
+#curve-status { margin: 0 0 18px; }
+.curve-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.metric-card { min-width: 0; background: white; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.metric-card h3 { padding: 20px 24px 0; font-size: 14px; font-weight: 600; }
+.metric-card a { display: block; }
+.metric-card img { display: block; width: 100%; height: auto; aspect-ratio: 64 / 33; object-fit: contain; }
+.metric-card p { padding: 0 24px 16px; font-size: 12px; color: var(--muted); }
+.training-notes { margin-top: 30px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 12px; line-height: 1.8; }
+.training-notes summary { font-size: 13px; }
+@media (max-width: 700px) {
+  .curve-grid { grid-template-columns: 1fr; gap: 16px; }
+  .training-summary { padding: 18px 14px; gap: 12px; }
+  .training-summary span { font-size: 10px; }
+  .training-summary strong { font-size: 15px; }
+  .topbar #status { font-size: 10px; max-width: 145px; }
+  .section-heading { flex-wrap: wrap; }
+  .metric-card h3 { padding: 18px 20px 0; }
+}
+
+#rollouts { padding-top: 0; }
+#rollout-frame { display: block; width: 100%; height: 1100px; border: 0; border-radius: 12px; }

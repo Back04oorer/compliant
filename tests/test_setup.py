@@ -25,7 +25,7 @@ def test_can_four_roles_and_commands():
     cfg, links = config_and_links()
     commands, mapping = load("setup_can").plan(cfg, links)
     assert len(commands) == 12 and len(mapping) == 4
-    assert [m["target"] for m in mapping] == ["can_sl", "can_sr", "can_left", "can_right"]
+    assert [m["target"] for m in mapping] == ["can_sl", "can_sr", "can_ml", "can_mr"]
     assert all(command[:4] == ["ip", "link", "set", "dev"] for command in commands)
     assert not any("down" in command for command in commands)
 
@@ -98,6 +98,56 @@ def test_install_preview_does_not_install(tmp_path, target):
     assert result.returncode == 0 and "PREVIEW ONLY" in result.stdout
     assert not venv.exists()
     assert "roscore" not in result.stdout
+
+
+@pytest.mark.parametrize('active', ['none', 'driver', 'launch', 'socket', 'any_socket', 'other_socket'])
+def test_can_automatic_guard(tmp_path, active):
+    mod = load('setup_can')
+    proc = tmp_path/'123'
+    proc.mkdir()
+    command = b'python3\0/opt/piper/piper_ctrl_follower_node.py\0' if active == 'driver' else (
+        b'roslaunch\0robot_setup\0start_robot_all.launch\0' if active == 'launch' else b'python3\0teleop_tui.py\0')
+    (proc/'cmdline').write_bytes(command)
+    receive = tmp_path/'net/can'
+    receive.mkdir(parents=True)
+    device = {'socket':'can0','any_socket':'any','other_socket':'can_other'}.get(active)
+    (receive/'rcvlist_all').write_text("receive list 'rx_all':\n device can_id can_mask\n" + (
+        device + ' 000 00000000 raw\n' if device else ' (any: no entry)\n'))
+    if active in {'driver','launch','socket','any_socket'}:
+        with pytest.raises(ValueError, match='running|socket is active'):
+            mod.ensure_drivers_stopped(['can0'], tmp_path)
+    else:
+        mod.ensure_drivers_stopped(['can0'], tmp_path)
+
+
+@pytest.mark.parametrize('blocked', [False, True])
+def test_can_cli_automatic_guard_precedes_changes(tmp_path, monkeypatch, blocked):
+    mod = load('setup_can')
+    cfg, links = config_and_links()
+    path = tmp_path/'hardware.json'
+    path.write_text(json.dumps(cfg))
+    active = copy.deepcopy(links)
+    for role, link in zip(mod.ROLES, active):
+        link.update(ifname=cfg[role], flags=['UP'])
+        link['linkinfo']['info_data'] = {'bittiming':{'bitrate':1000000},'state':'ERROR-ACTIVE'}
+    snapshots = iter([links, links, active])
+    monkeypatch.setattr(mod, 'inventory', lambda: next(snapshots))
+    calls = []
+    def guard(interfaces):
+        assert not calls
+        assert interfaces == ['can0','can1','can2','can3']
+        if blocked:
+            raise ValueError('CAN controller is running')
+    monkeypatch.setattr(mod, 'ensure_drivers_stopped', guard)
+    monkeypatch.setattr(mod.subprocess, 'run', lambda cmd, **kwargs: calls.append(cmd))
+    monkeypatch.setattr(sys, 'argv', ['setup_can','--config',str(path),'--execute','--check-drivers-stopped'])
+    if blocked:
+        with pytest.raises(SystemExit):
+            mod.main()
+        assert calls == []
+    else:
+        assert mod.main() == 0
+        assert len(calls) == 12
 
 
 def test_install_refuses_existing_environment(tmp_path):

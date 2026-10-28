@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Piper · 柔顺动画对比</title><link rel="stylesheet" href="/replay.css"><script type="module" src="/replay.js"></script></head>
+<body><header><a href="/">← 训练概览</a><span> PIPER / COMPLIANCE LAB</span></header>
+<main><p class="eyebrow">RECORDED EVALUATION</p><h1>同一次推动，看它如何让开。</h1>
+<p id="rollout-description" class="intro">真实评估轨迹同步回放 · 固定夹爪 · 2 N 推力 · 柔顺目标 20 mm</p>
+<p><a href="/soft-live.html">↗ 进入实时对比：拖动末端，自定义推力</a></p>
+<section class="controls" aria-label="回放控制">
+<label>推力 <select id="force-level" disabled><option value="0.5">0.5 N · 5 mm 目标</option><option value="1">1 N · 10 mm 目标</option><option value="2" selected>2 N · 20 mm 目标</option><option value="3">3 N · 30 mm 目标</option><option value="5">5 N · 50 mm 目标</option></select></label>
+<label>方向 <select id="direction"><option>+X</option><option>-X</option><option>+Y</option><option>-Y</option><option selected>+Z</option><option>-Z</option></select></label>
+<label>观测 <select id="noise"><option value="clean">无噪声</option><option value="noisy">训练同级噪声</option></select></label>
+<label>速度 <select id="speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label>
+<button id="play" disabled>暂停</button><button id="restart" disabled>从头播放</button>
+<label><input id="loop" type="checkbox" checked>循环</label><button id="camera">重置视角</button>
+<div class="timeline"><input id="seek" type="range" min="0" max="12" step="0.02" value="0" aria-label="回放时间"><output id="clock">0.00 / 12.00 s</output></div>
+<div class="status"><strong id="phase">正在加载网格和轨迹…</strong><span id="force">外力 0.00 N</span><span>0–3 s 保持 · 3–6 s 受推 · 6–12 s 恢复</span></div>
+</section>
+<p id="notice" role="status">拖动任一机械臂窗口旋转全部视角；滚轮缩放。绿色圆点为原始目标，橙色圆环为受力后的柔顺目标。</p>
+<div id="worlds" class="worlds"></div>
+<p class="footnote">机械臂按真实比例运动；每个窗口下方是末端位移放大图，方便看清毫米级差异。让开距离相对受推前位置，目标误差为实际末端到柔顺目标的三维距离。撤力后目标回到原始参考位置。</p>
+<p class="footnote">每档力量均独立运行 Isaac 仿真并记录轨迹，不是按比例放大动作。含噪声模式的策略使用训练同级观测噪声，解析基线读取真实状态与外力。大力工况中的偏离和失败保留显示。</p>
+<p class="footnote">力量示例使用标准模型。不同 rollout 的噪声样本不同；本组是新生成的轨迹，单次表现不代表跨噪声样本的稳定性。</p>
+</main></body></html>

@@ -28,3 +28,6 @@ external/
 *.engine
 *.onnx
 *.mmap
+
+# Pinned external training toolchains; revisions recorded in experiment manifests.
+/sim/vendor/

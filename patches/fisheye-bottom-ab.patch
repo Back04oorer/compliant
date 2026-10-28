@@ -1,0 +1,353 @@
+diff --git a/camera_calib_charuco/stereo_calibration/controller.py b/camera_calib_charuco/stereo_calibration/controller.py
+index d9c6150..52d29ff 100644
+--- a/camera_calib_charuco/stereo_calibration/controller.py
++++ b/camera_calib_charuco/stereo_calibration/controller.py
+@@ -18,6 +18,7 @@ from .config import BoardConfig, CameraConfig
+ from .guidance import (
+     TRAINING_GOALS,
+     VALIDATION_GOALS,
++    current_goal_keys,
+     Hold,
+     achieved,
+     capture_ready,
+@@ -349,16 +350,16 @@ class Controller:
+     @property
+     def next_goal(self):
+         if self.session and not self.validating:
+-            pending = set((self.session.data.get("training_request") or {}).get("goals", []))
++            pending = current_goal_keys((self.session.data.get("training_request") or {}).get("goals", []))
+             pending.difference_update(self.done_goals)
+             if pending:
+                 return next(g for g in self.goals if g.key in pending)
+         if self.validating:
+-            pending = {
++            pending = current_goal_keys({
+                 region["key"]
+                 for region in (self.session.candidate.get("report") or {}).get("regions", [])
+                 if region["status"] in ("failed", "confirm")
+-            }
++            })
+             if pending:
+                 return next(g for g in self.goals if g.key in pending)
+         return next((g for g in self.goals if g.key not in self.done_goals), None)
+@@ -404,7 +405,7 @@ class Controller:
+         # Old coverage must not immediately satisfy this request again.
+         request = self.session.data.get("training_request")
+         if role == "training" and request:
+-            required = set(request["goals"])
++            required = current_goal_keys(request["goals"])
+             self.done_goals.difference_update(required)
+             previous = set(request["existing_captures"])
+             for capture in self.session.captures("training"):
+diff --git a/camera_calib_charuco/stereo_calibration/guidance.py b/camera_calib_charuco/stereo_calibration/guidance.py
+index 7c9c3ae..74a6975 100644
+--- a/camera_calib_charuco/stereo_calibration/guidance.py
++++ b/camera_calib_charuco/stereo_calibration/guidance.py
+@@ -34,10 +34,28 @@ POSITIONS = [
+     ("upper-right", 0.8, 0.2),
+     ("right", 0.8, 0.5),
+     ("lower-right", 0.8, 0.8),
+-    ("bottom", 0.5, 0.8),
++    ("bottom-a", 0.4, 0.8),
++    ("bottom-b", 0.6, 0.8),
+     ("lower-left", 0.2, 0.8),
+     ("left", 0.2, 0.5),
+ ]
++
++
++def position_radius(target):
++    # Keep the two bottom regions disjoint: one image must not complete both.
++    return 0.08 if target in ((0.4, 0.8), (0.6, 0.8)) else POSITION_RADIUS
++
++
++def current_goal_keys(keys):
++    """Resume old bottom retry requests without changing saved capture provenance."""
++    result = set(keys)
++    for old in ("bottom", "check-bottom"):
++        if old in result:
++            result.remove(old)
++            result.update((old + "-a", old + "-b"))
++    return result
++
++
+ TRAINING_GOALS = [
+     Goal(
+         name,
+@@ -194,7 +212,7 @@ def achieved(signature, reference_scale, *, validation=False):
+         if goal.kind == "position":
+             good = (
+                 math.hypot(signature["x"] - goal.target[0], signature["y"] - goal.target[1])
+-                < POSITION_RADIUS
++                < position_radius(goal.target)
+             )
+         elif goal.kind == "near":
+             good = reference_scale is not None and signature["scale"] >= reference_scale * 1.3
+diff --git a/camera_calib_charuco/stereo_calibration/live_preview.py b/camera_calib_charuco/stereo_calibration/live_preview.py
+index 9987e12..f9573b3 100644
+--- a/camera_calib_charuco/stereo_calibration/live_preview.py
++++ b/camera_calib_charuco/stereo_calibration/live_preview.py
+@@ -6,7 +6,7 @@ import time
+ import cv2
+ import numpy as np
+ 
+-from .guidance import POSITION_RADIUS
++from .guidance import position_radius
+ from .preview import Preview
+ 
+ 
+@@ -64,7 +64,7 @@ class LivePreview:
+             views = [cv2.resize(view, size, interpolation=cv2.INTER_AREA) for view in views]
+             if target:
+                 centre = tuple(np.rint(np.asarray(target) * size).astype(int))
+-                axes = tuple(np.maximum(1, np.rint(np.asarray(size) * POSITION_RADIUS)).astype(int))
++                axes = tuple(np.maximum(1, np.rint(np.asarray(size) * position_radius(target))).astype(int))
+                 overlay = views[0].copy()
+                 cv2.ellipse(overlay, centre, axes, 0, 0, 360, (245, 190, 30), -1)
+                 cv2.addWeighted(overlay, .12, views[0], .88, 0, dst=views[0])
+diff --git a/camera_calib_charuco/stereo_calibration/preview.py b/camera_calib_charuco/stereo_calibration/preview.py
+index 7dd5ce4..512b71c 100644
+--- a/camera_calib_charuco/stereo_calibration/preview.py
++++ b/camera_calib_charuco/stereo_calibration/preview.py
+@@ -3,7 +3,7 @@
+ import cv2
+ import numpy as np
+ 
+-from .guidance import POSITION_RADIUS
++from .guidance import position_radius
+ 
+ 
+ class Preview:
+@@ -22,7 +22,7 @@ class Preview:
+             # do not identify a common physical position, so do not duplicate this cue.
+             target = tuple(np.rint(np.asarray(goal.target) * camera.eye_size).astype(int))
+             axes = tuple(
+-                np.maximum(1, np.rint(np.asarray(camera.eye_size) * POSITION_RADIUS)).astype(int)
++                np.maximum(1, np.rint(np.asarray(camera.eye_size) * position_radius(goal.target))).astype(int)
+             )
+             overlay = raw[0].copy()
+             cv2.ellipse(overlay, target, axes, 0, 0, 360, (245, 190, 30), -1)
+diff --git a/camera_calib_charuco/stereo_calibration/verification.py b/camera_calib_charuco/stereo_calibration/verification.py
+index ed6cd99..8ae7097 100644
+--- a/camera_calib_charuco/stereo_calibration/verification.py
++++ b/camera_calib_charuco/stereo_calibration/verification.py
+@@ -6,12 +6,13 @@ and an old failed measurement cannot be replaced by a later favourable capture.
+ 
+ import cv2
+ 
+-from .guidance import VALIDATION_GOALS, achieved, describe
++from .guidance import VALIDATION_GOALS, achieved, current_goal_keys, describe
+ from .observations import Observation
+ from .validation import evaluate
+ 
+ 
+ def evaluate_saved_checks(captures, model, board, candidate_id, required_fresh=()):
++    required_fresh = current_goal_keys(required_fresh)
+     observations = [Observation.from_dict(capture["observation"]) for capture in captures]
+     report = evaluate(observations, model, board)
+     passed, failed, fresh, reused = set(), set(), set(), set()
+diff --git a/camera_calib_charuco/tests/test_guidance.py b/camera_calib_charuco/tests/test_guidance.py
+index 2753cb1..47f7c7e 100644
+--- a/camera_calib_charuco/tests/test_guidance.py
++++ b/camera_calib_charuco/tests/test_guidance.py
+@@ -13,6 +13,53 @@ from stereo_calibration.guidance import (
+ from stereo_calibration.observations import Observation
+ 
+ 
++@pytest.mark.parametrize("validation", [False, True])
++def test_bottom_requires_separate_left_and_right_positions(validation):
++    from stereo_calibration.guidance import achieved
++
++    prefix = "check-" if validation else ""
++    goals = VALIDATION_GOALS if validation else TRAINING_GOALS
++    keys = {g.key for g in goals}
++    assert prefix + "bottom" not in keys
++    assert {prefix + "bottom-a", prefix + "bottom-b"} <= keys
++    pose = dict(x=0.4, y=0.8, scale=0.3, skew_x=0, skew_y=0,
++                roll=0, tilt_x=0, tilt_y=0)
++    a, b = prefix + "bottom-a", prefix + "bottom-b"
++    assert set(achieved(pose, None, validation=validation)) == {a}
++    assert set(achieved(dict(pose, x=0.6), None, validation=validation)) == {b}
++    assert not {a, b}.intersection(achieved(dict(pose, x=0.5), None, validation=validation))
++    # Sweep the region to catch accidental overlap, not just the goal centres.
++    for x in np.linspace(0.2, 0.8, 121):
++        assert not {a, b} <= set(achieved(dict(pose, x=x), None, validation=validation))
++    if validation:
++        assert capture_ready(dict(pose, x=0.6), [pose], pose, {a}, None, validation=True)
++
++
++def test_training_cannot_finish_with_only_one_bottom_point(tmp_path, monkeypatch):
++    from stereo_calibration.config import BoardConfig, CameraConfig
++    from stereo_calibration.controller import Controller
++    from stereo_calibration.guidance import current_goal_keys
++
++    controller = Controller(BoardConfig(), CameraConfig(), output=tmp_path)
++    try:
++        controller.signatures = [None] * 20
++        controller.done_goals = {g.key for g in TRAINING_GOALS} - {"bottom-b"}
++        controller.model = object()  # A provisional fit already exists.
++        fits = []
++        monkeypatch.setattr(controller, "start_fit", lambda *, final: fits.append(final))
++        assert controller.next_goal.key == "bottom-b"
++        controller.after_capture()
++        assert fits == []
++        controller.done_goals.add("bottom-b")
++        controller.after_capture()
++        assert fits == [True]
++        assert current_goal_keys(["bottom", "tilt-bottom"]) == {
++            "bottom-a", "bottom-b", "tilt-bottom"
++        }
++    finally:
++        controller.close()
++
++
+ def test_stereo_short_hold_requires_fresh_stable_frames_and_keeps_sharpest_pair():
+     pixels = np.array([[x * 20, y * 20] for y in range(3) for x in range(4)], dtype=float)
+     obs = Observation("test", (1280, 720), np.arange(12), pixels, np.arange(12), pixels.copy())
+diff --git a/camera_calib_charuco/tests/test_session_workflow.py b/camera_calib_charuco/tests/test_session_workflow.py
+index dab2509..ca3bdc7 100644
+--- a/camera_calib_charuco/tests/test_session_workflow.py
++++ b/camera_calib_charuco/tests/test_session_workflow.py
+@@ -333,9 +333,9 @@ def test_guided_fresh_checks_finish_or_retry_automatically(tmp_path, bad_view):
+             resumed.close()
+             return
+     assert controller.phase == "done"
+-    assert len(session.captures("validation")) == 9
++    assert len(session.captures("validation")) == len(POSITIONS)
+     assert session.candidate["report"]["passed"]
+     controller.close()
+     replay = Controller(session=Session(session.path, readonly=True), replay=True)
+-    assert len(replay.goals) == len(replay.done_goals) == 9
++    assert len(replay.goals) == len(replay.done_goals) == len(POSITIONS)
+     replay.close()
+diff --git a/camera_calib_charuco/tests/test_verification.py b/camera_calib_charuco/tests/test_verification.py
+index 2d83037..a14bb38 100644
+--- a/camera_calib_charuco/tests/test_verification.py
++++ b/camera_calib_charuco/tests/test_verification.py
+@@ -11,6 +11,32 @@ from stereo_calibration.session import Session, fit_snapshot
+ from stereo_calibration.verification import evaluate_saved_checks
+ 
+ 
++@pytest.mark.parametrize("missing", ["bottom-a", "bottom-b"])
++def test_validation_cannot_pass_without_each_bottom_point(missing):
++    from stereo_calibration.calibration import fit
++
++    board, training, K, D, R, T = observations(9)
++    model, _ = fit(training, board)
++    regional = regional_observations(board, K, D, R, T)
++    captures = [
++        dict(id=view.name, observation=view.to_dict(), candidate="current", goals=[])
++        for view in regional
++    ]
++    partial = [c for c in captures if c["id"] != missing]
++    report = evaluate_saved_checks(partial, model, board, "current")
++    assert report["fit_passed"]
++    assert all(v["passed"] for v in report["validation_views"])
++    assert not report["passed"] and not report["goals_complete"]
++    assert next(r["status"] for r in report["regions"]
++                if r["key"] == "check-" + missing) == "missing"
++    assert evaluate_saved_checks(captures, model, board, "current")["passed"]
++    # An old retry request must still require fresh evidence on both sides.
++    old = evaluate_saved_checks(captures, model, board, "new", ["check-bottom"])
++    assert {r["key"] for r in old["regions"] if r["status"] == "confirm"} == {
++        "check-bottom-a", "check-bottom-b"
++    }
++
++
+ @pytest.mark.parametrize("damaged_check", [False, True])
+ def test_refit_preserves_rechecked_coverage_and_targets_only_outstanding_areas(
+     tmp_path, damaged_check
+@@ -34,17 +60,17 @@ def test_refit_preserves_rechecked_coverage_and_targets_only_outstanding_areas(
+     for view in training:
+         save(view, "training")
+     session.accept_fit(fit_snapshot(session.training_snapshot()))
+-    # Eight regions were checked; left has not been visited yet.
+-    for index, view in enumerate(regional[:8]):
++    # All regions except left were checked.
++    for index, view in enumerate(regional[:-1]):
+         view = copy.deepcopy(view)
+-        if damaged_check and index == 7:
++        if damaged_check and view.name == "lower-left":
+             view.left_points[:, 0] += 4 * np.sin(np.arange(len(view.left_ids)))
+         save(view, "validation")
+     old_report = copy.deepcopy(session.validate())
+     originals = copy.deepcopy(session.data["captures"])
+     first_candidate = session.candidate["id"]
+     session.new_round(["lower-left"], reason="Improve lower left")
+-    save(regional[7], "training")
++    save(regional[-2], "training")
+     snapshot = session.training_snapshot()
+     session.accept_fit(fit_snapshot(snapshot))
+     second_candidate = session.candidate["id"]
+@@ -59,18 +85,18 @@ def test_refit_preserves_rechecked_coverage_and_targets_only_outstanding_areas(
+     assert regions["check-upper-left"] == "passed"
+     assert regions["check-left"] == "missing"
+     assert regions["check-lower-left"] == ("failed" if damaged_check else "confirm")
+-    assert len(report["reused_passed_regions"]) == 7
+-    assert len(report["validation_views"]) == 8
++    assert len(report["reused_passed_regions"]) == len(regional) - 2
++    assert len(report["validation_views"]) == len(regional) - 1
+     assert not report["passed"]
+ 
+     if damaged_check:
+         # A new favourable photo cannot hide the original failing measurement.
+-        save(regional[7], "validation")
++        save(regional[-2], "validation")
+         report = session.validate()
+         assert not report["passed"]
+-        assert len(report["validation_views"]) == 9
+-        assert not report["validation_views"][7]["passed"]
+-        assert report["validation_views"][8]["passed"]
++        assert len(report["validation_views"]) == len(regional)
++        assert not report["validation_views"][-2]["passed"]
++        assert report["validation_views"][-1]["passed"]
+         controller = Controller(session=session)
+         assert controller.phase == "collecting"
+         assert controller.next_goal.key == "lower-left"
+@@ -86,11 +112,11 @@ def test_refit_preserves_rechecked_coverage_and_targets_only_outstanding_areas(
+     controller = Controller(session=session)
+     assert controller.phase == "validating"
+     assert controller.next_goal.key == "check-lower-left"
+-    assert len(controller.done_goals) == 7
+-    save(regional[7], "validation")
++    assert len(controller.done_goals) == len(regional) - 2
++    save(regional[-2], "validation")
+     controller.after_capture()
+     assert controller.next_goal.key == "check-left"
+-    save(regional[8], "validation")
++    save(regional[-1], "validation")
+     controller.after_capture()
+     assert controller.phase == "done"
+     assert session.candidate["report"]["passed"]
+diff --git a/camera_calib_charuco/tests/test_video.py b/camera_calib_charuco/tests/test_video.py
+index 04cc555..75d2649 100644
+--- a/camera_calib_charuco/tests/test_video.py
++++ b/camera_calib_charuco/tests/test_video.py
+@@ -15,6 +15,28 @@ from stereo_calibration.live_preview import LivePreview
+ from stereo_calibration.observations import Detector
+ 
+ 
++@pytest.mark.parametrize("target,radius", [((.4, .8), .08), ((.6, .8), .08), ((.5, .5), .14)])
++def test_preview_target_matches_capture_radius(monkeypatch, target, radius):
++    from stereo_calibration.guidance import TRAINING_GOALS
++    from stereo_calibration.observations import Observation
++    from stereo_calibration.preview import Preview
++
++    camera = CameraConfig()
++    frame = np.zeros((camera.height, camera.width, 3), np.uint8)
++    drawn = []
++    monkeypatch.setattr(cv2, "ellipse", lambda image, centre, axes, *args: drawn.append(axes))
++    LivePreview().render(frame, camera, None, target, "raw")
++    expected = tuple(np.rint(np.array([800, 450]) * radius).astype(int))
++    assert drawn == [expected, expected]
++    drawn.clear()
++    empty = Observation("empty", camera.eye_size, np.array([], dtype=int),
++                        np.empty((0, 2)), np.array([], dtype=int), np.empty((0, 2)))
++    goal = next(g for g in TRAINING_GOALS if g.target == target)
++    Preview().render(frame, empty, None, goal, camera)
++    expected = tuple(np.rint(np.array(camera.eye_size) * radius).astype(int))
++    assert drawn == [expected, expected]
++
++
+ def test_latest_video_advances_without_detection_and_preserves_raw_images():
+     camera = CameraConfig(width=1920, height=1200)
+     source = CameraSource(camera)

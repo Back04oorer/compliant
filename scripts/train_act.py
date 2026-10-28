@@ -2,6 +2,7 @@
 """Portable LeRobot RGB ACT entry. Stereo-ACT uses training/scripts/train_policy.py."""
 import argparse
 import json
+import os
 from pathlib import Path
 import shlex
 import subprocess
@@ -9,6 +10,9 @@ import sys
 
 
 def build_command(args):
+    image_size = getattr(args, "image_size", None)
+    if image_size is not None and image_size <= 0:
+        raise ValueError("Image size must be positive")
     info = json.loads((args.dataset / "meta/info.json").read_text())
     f = info["features"]
     dims = (14, 7) if args.arm_mode == "single" else (28, 14)
@@ -17,6 +21,11 @@ def build_command(args):
     keys = ["observation.image", "observation.right_wrist_image"]
     if args.arm_mode == "bimanual":
         keys.append("observation.left_wrist_image")
+    keys = [key for key in keys if key in f]
+    if args.arm_mode == "single" and "observation.right_wrist_image" not in f and "observation.left_wrist_image" in f:
+        keys.append("observation.left_wrist_image")
+    if not keys:
+        raise ValueError("ACT requires at least one RGB camera feature")
     inputs = {"observation.state": {"type": "STATE", "shape": [dims[0]]}}
     for key in keys:
         feature = f[key]
@@ -26,11 +35,17 @@ def build_command(args):
             shape = [shape[-1], shape[0], shape[1]]
         if len(shape) != 3 or shape[0] != 3:
             raise ValueError(f"Unexpected RGB shape for {key}: {shape}")
+        if image_size is not None:
+            shape = [3, image_size, image_size]
         inputs[key] = {"type": "VISUAL", "shape": shape}
     if args.steps <= 0 or args.batch_size <= 0:
         raise ValueError("Steps and batch size must be positive")
-    return [sys.executable, "-m", "lerobot.scripts.lerobot_train",
-        "--policy.type=act", "--policy.device=cuda", "--policy.push_to_hub=false",
+    entry = [sys.executable, "-m", "lerobot.scripts.lerobot_train"]
+    if image_size is not None:
+        entry = [sys.executable, str(Path(__file__).with_name("lerobot_train_rgb_act.py")),
+                 "--image-size=" + str(image_size)]
+    return [*entry,
+        "--policy.type=act", "--policy.device=cuda", "--policy.push_to_hub=false", "--policy.use_amp=true",
         "--dataset.repo_id=" + args.dataset.name, "--dataset.root=" + str(args.dataset.resolve()),
         "--dataset.video_backend=torchcodec", "--output_dir=" + str(args.output.resolve()),
         "--policy.input_features=" + json.dumps(inputs),
@@ -50,12 +65,14 @@ def main():
     p.add_argument("--arm-mode", choices=["single", "bimanual"], required=True)
     p.add_argument("--steps", type=int, default=80000)
     p.add_argument("--batch-size", type=int, default=16)
+    p.add_argument("--image-size", type=int, help="Resize RGB inputs to this square size; saved in the checkpoint preprocessor")
     p.add_argument("--smoke", action="store_true")
     p.add_argument("--dry-run", action="store_true")
     args = p.parse_args()
     command = build_command(args)
-    print(shlex.join(command), flush=True)
-    return 0 if args.dry_run else subprocess.call(command)
+    env = dict(os.environ, ACCELERATE_MIXED_PRECISION="bf16")
+    print("ACCELERATE_MIXED_PRECISION=bf16 " + shlex.join(command), flush=True)
+    return 0 if args.dry_run else subprocess.call(command, env=env)
 
 
 if __name__ == "__main__":
